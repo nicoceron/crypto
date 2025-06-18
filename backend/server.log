@@ -1,0 +1,34 @@
+2025/06/18 16:13:43 Database connection established successfully
+2025/06/18 16:13:43 Initialized Alpaca service with API key: PKP5****
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> stock-analyzer/internal/api.(*Handlers).HealthCheck-fm (4 handlers)
+[GIN-debug] GET    /api/v1/ratings           --> stock-analyzer/internal/api.(*Handlers).GetStockRatings-fm (4 handlers)
+[GIN-debug] GET    /api/v1/ratings/:ticker   --> stock-analyzer/internal/api.(*Handlers).GetStockRatingsByTicker-fm (4 handlers)
+[GIN-debug] GET    /api/v1/recommendations   --> stock-analyzer/internal/api.(*Handlers).GetRecommendations-fm (4 handlers)
+[GIN-debug] GET    /api/v1/stocks/:symbol/price --> stock-analyzer/internal/api.(*Handlers).GetStockPrice-fm (4 handlers)
+[GIN-debug] GET    /api/v1/stocks/:symbol/logo --> stock-analyzer/internal/api.(*Handlers).GetStockLogo-fm (4 handlers)
+[GIN-debug] POST   /api/v1/ingest            --> stock-analyzer/internal/api.(*Handlers).TriggerIngestion-fm (4 handlers)
+2025/06/18 16:13:43 Starting server on port 8080
+Requesting 1W data for DLR from 2025-06-11 to 2025-06-18
+Alpaca request: symbol=DLR, start=2025-06-11, end=2025-06-18
+Alpaca SDK returned 5 bars for DLR (requested 2025-06-11 to 2025-06-18)
+Returning 5 real bars for DLR period 1W
+[GIN] 2025/06/18 - 16:14:08 | 200 |  434.212166ms |             ::1 | GET      "/api/v1/stocks/DLR/price?period=1W"
+Requesting 1M data for DLR from 2025-05-18 to 2025-06-18
+Alpaca request: symbol=DLR, start=2025-05-18, end=2025-06-18
+Alpaca SDK returned 22 bars for DLR (requested 2025-05-18 to 2025-06-18)
+Returning 22 real bars for DLR period 1M
+[GIN] 2025/06/18 - 16:14:08 | 200 |   88.305959ms |             ::1 | GET      "/api/v1/stocks/DLR/price?period=1M"
+Requesting 3M data for DLR from 2025-03-18 to 2025-06-18
+Alpaca request: symbol=DLR, start=2025-03-18, end=2025-06-18
+Alpaca SDK returned 64 bars for DLR (requested 2025-03-18 to 2025-06-18)
+Returning 64 real bars for DLR period 3M
+[GIN] 2025/06/18 - 16:14:08 | 200 |   79.963209ms |             ::1 | GET      "/api/v1/stocks/DLR/price?period=3M"
+Requesting 1Y data for DLR from 2024-06-18 to 2025-06-18
+Alpaca request: symbol=DLR, start=2024-06-18, end=2025-06-18
+Alpaca SDK returned 250 bars for DLR (requested 2024-06-18 to 2025-06-18)
+Returning 250 real bars for DLR period 1Y
+[GIN] 2025/06/18 - 16:14:33 | 200 |  106.389417ms |             ::1 | GET      "/api/v1/stocks/DLR/price?period=1Y"
