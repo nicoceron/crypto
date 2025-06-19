@@ -121,7 +121,7 @@
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search by ticker, company..."
-                class="block w-full pr-10 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                class="block w-full pr-10 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-900 placeholder-gray-500"
                 @input="debouncedSearch"
               />
               <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -134,14 +134,14 @@
           <div>
             <select
               v-model="sortBy"
-              class="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              class="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-900"
               @change="handleSort"
             >
-              <option value="updated_at">Last Updated</option>
+              <option value="time">Last Updated</option>
               <option value="ticker">Ticker</option>
-              <option value="firm">Firm</option>
-              <option value="rating">Rating</option>
-              <option value="price_target">Price Target</option>
+              <option value="brokerage">Firm</option>
+              <option value="rating_to">Rating</option>
+              <option value="target_to">Price Target</option>
             </select>
           </div>
 
@@ -149,7 +149,7 @@
           <div>
             <select
               v-model="sortOrder"
-              class="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              class="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-900"
               @change="handleSort"
             >
               <option value="desc">High to Low</option>
@@ -161,7 +161,7 @@
           <div>
             <select
               v-model="pageSize"
-              class="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              class="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-900"
               @change="handlePageSizeChange"
             >
               <option value="10">10 per page</option>
@@ -378,7 +378,7 @@ const stocksStore = useStocksStore()
 
 // Local state
 const searchQuery = ref('')
-const sortBy = ref<RatingsFilters['sort_by']>('updated_at')
+const sortBy = ref<RatingsFilters['sort_by']>('time')
 const sortOrder = ref<RatingsFilters['order']>('desc')
 const pageSize = ref(20)
 

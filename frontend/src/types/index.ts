@@ -46,7 +46,7 @@ export interface StockRecommendation {
 export interface RatingsFilters {
   page?: number
   limit?: number
-  sort_by?: 'ticker' | 'firm' | 'analyst' | 'rating' | 'price_target' | 'updated_at'
+  sort_by?: 'ticker' | 'brokerage' | 'rating_to' | 'target_to' | 'updated_at' | 'time'
   order?: 'asc' | 'desc'
   search?: string
   ticker?: string
@@ -168,4 +168,3 @@ export interface HealthCheck {
   version?: string
   uptime?: string
 }
- 

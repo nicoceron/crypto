@@ -31,7 +31,8 @@
       <div
         v-for="recommendation in sortedRecommendations"
         :key="recommendation.ticker"
-        class="bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
+        @click="navigateToStock(recommendation.ticker)"
+        class="bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
       >
         <div class="p-6">
           <!-- Header -->
@@ -196,6 +197,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   StarIcon,
   ArrowPathIcon,
@@ -207,8 +209,9 @@ import {
 import { useStocksStore } from '@/stores/stocks'
 import StockLogo from '@/components/StockLogo.vue'
 
-// Store
+// Store and router
 const stocksStore = useStocksStore()
+const router = useRouter()
 
 // Computed
 const sortedRecommendations = computed(() => {
@@ -283,6 +286,10 @@ const getTimeAgo = (dateString: string) => {
   }
 }
 
+const navigateToStock = (ticker: string) => {
+  router.push(`/stock/${ticker}`)
+}
+
 // Lifecycle
 onMounted(() => {
   if (stocksStore.recommendations.length === 0) {
@@ -290,4 +297,3 @@ onMounted(() => {
   }
 })
 </script>
- 

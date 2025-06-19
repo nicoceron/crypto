@@ -153,10 +153,10 @@ const route = useRoute()
 const mobileMenuOpen = ref(false)
 
 // Navigation items
-const navigation: NavItem[] = [
-  { name: 'Markets', href: '/', icon: TableCellsIcon },
-  { name: 'Recommendations', href: '/recommendations', icon: StarIcon },
-]
+const navigation = ref<NavItem[]>([
+  { name: 'Markets', href: '/', icon: TableCellsIcon, current: false },
+  { name: 'Recommendations', href: '/recommendations', icon: StarIcon, current: false },
+])
 
 // Computed
 const formatLastUpdated = computed(() => {
@@ -170,8 +170,9 @@ const formatLastUpdated = computed(() => {
 
 // Update navigation current state based on route
 const updateNavigationState = () => {
-  navigation.forEach((item) => {
-    item.current = route.path === item.href
+  navigation.value.forEach((item) => {
+    item.current =
+      route.path === item.href || (route.path.startsWith('/stock/') && item.href === '/')
   })
 }
 
@@ -195,4 +196,3 @@ onMounted(() => {
 import { watch } from 'vue'
 watch(() => route.path, updateNavigationState)
 </script>
- 

@@ -1,20 +1,6 @@
 <template>
-  <div class="stock-chart">
-    <div class="chart-header">
-      <h3 class="chart-title">{{ symbol }} Price Chart</h3>
-      <div class="chart-controls">
-        <button
-          v-for="period in chartPeriods"
-          :key="period.value"
-          @click="selectedPeriod = period.value"
-          :class="['period-btn', { active: selectedPeriod === period.value }]"
-        >
-          {{ period.label }}
-        </button>
-      </div>
-    </div>
-
-    <div class="chart-container">
+  <div class="stock-chart-container">
+    <div class="chart-wrapper">
       <Line
         v-if="!loading && !error && chartData.length > 0"
         :data="chartDataFormatted"
@@ -48,12 +34,22 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
   type ChartOptions,
   type ChartData,
 } from 'chart.js'
 
 // Register Chart.js components
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+)
 
 interface PriceBar {
   timestamp: string
@@ -67,26 +63,22 @@ interface PriceBar {
 interface Props {
   symbol: string
   height?: number
+  period?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   height: 400,
+  period: '1M',
 })
 
 // Reactive state
 const loading = ref(false)
 const error = ref('')
 const chartData = ref<PriceBar[]>([])
-const selectedPeriod = ref('1M')
+const selectedPeriod = ref(props.period)
 const chartKey = ref(0) // Force re-render when needed
 
-const chartPeriods = [
-  { label: '1W', value: '1W' },
-  { label: '1M', value: '1M' },
-  { label: '3M', value: '3M' },
-  { label: '6M', value: '6M' },
-  { label: '1Y', value: '1Y' },
-]
+// Removed unused chartPeriods - periods are handled in StockDetailView
 
 // Load chart data from API
 const loadChartData = async () => {
@@ -108,7 +100,7 @@ const loadChartData = async () => {
 
     // Validate and filter data
     const validBars = bars.filter(
-      (bar: any) =>
+      (bar: PriceBar) =>
         bar && bar.timestamp && typeof bar.close === 'number' && !isNaN(bar.close) && bar.close > 0,
     )
 
@@ -181,9 +173,34 @@ const chartDataFormatted = computed<ChartData<'line'>>(() => {
         label: `${props.symbol} Price`,
         data: prices,
         borderColor: isPositive ? '#10b981' : '#ef4444',
-        backgroundColor: 'transparent',
+        backgroundColor: (context: {
+          chart: { ctx: CanvasRenderingContext2D; chartArea?: { top: number; bottom: number } }
+        }) => {
+          if (!context.chart.chartArea) {
+            return isPositive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+          }
+
+          const gradient = context.chart.ctx.createLinearGradient(
+            0,
+            context.chart.chartArea.top,
+            0,
+            context.chart.chartArea.bottom,
+          )
+
+          if (isPositive) {
+            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)')
+            gradient.addColorStop(0.7, 'rgba(16, 185, 129, 0.1)')
+            gradient.addColorStop(1, 'rgba(16, 185, 129, 0)')
+          } else {
+            gradient.addColorStop(0, 'rgba(239, 68, 68, 0.4)')
+            gradient.addColorStop(0.7, 'rgba(239, 68, 68, 0.1)')
+            gradient.addColorStop(1, 'rgba(239, 68, 68, 0)')
+          }
+
+          return gradient
+        },
         borderWidth: 2,
-        fill: false,
+        fill: true,
         tension: 0.1,
         pointRadius: 0,
         pointHoverRadius: 4,
@@ -273,6 +290,15 @@ watch(selectedPeriod, () => {
   loadChartData()
 })
 
+// Watch for external period prop changes
+watch(
+  () => props.period,
+  (newPeriod) => {
+    selectedPeriod.value = newPeriod
+  },
+  { immediate: false },
+)
+
 onMounted(() => {
   if (props.symbol) {
     loadChartData()
@@ -281,33 +307,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.stock-chart {
-  @apply bg-white rounded-lg border border-gray-200 p-6 shadow-sm;
+.stock-chart-container {
+  @apply w-full h-full;
 }
 
-.chart-header {
-  @apply flex justify-between items-center mb-6;
-}
-
-.chart-title {
-  @apply text-lg font-semibold text-gray-900;
-}
-
-.chart-controls {
-  @apply flex space-x-2;
-}
-
-.period-btn {
-  @apply px-3 py-1 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors;
-}
-
-.period-btn.active {
-  @apply bg-blue-600 text-white border-blue-600 hover:bg-blue-700;
-}
-
-.chart-container {
-  @apply relative;
-  height: 400px;
+.chart-wrapper {
+  @apply relative w-full h-full;
+  min-height: 300px;
 }
 
 .loading-overlay {

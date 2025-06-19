@@ -212,4 +212,3 @@ onMounted(() => {
   @apply w-6 h-6 border-2;
 }
 </style>
- 

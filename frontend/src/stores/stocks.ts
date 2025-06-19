@@ -188,7 +188,7 @@ export const useStocksStore = defineStore('stocks', () => {
     filters.value = {
       page: 1,
       limit: 20,
-      sort_by: 'updated_at',
+      sort_by: 'time',
       order: 'desc',
       search: '',
     }
@@ -243,4 +243,3 @@ export const useStocksStore = defineStore('stocks', () => {
     clearError,
   }
 })
- 
