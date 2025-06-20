@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <!-- Breadcrumb -->
       <nav class="flex mb-4" aria-label="Breadcrumb">
@@ -148,13 +148,32 @@
                   <div class="text-xs text-gray-500">{{ formatDate(rating.time) }}</div>
                 </div>
                 <div class="text-right">
+                  <!-- Show rating change if different -->
+                  <div
+                    v-if="rating.rating_from && rating.rating_from !== rating.rating_to"
+                    class="flex items-center justify-end space-x-2 mb-2"
+                  >
+                    <div class="text-right opacity-60">
+                      <span
+                        class="inline-flex px-2 py-1 text-xs font-medium rounded-lg bg-gray-100 text-gray-500 border line-through"
+                      >
+                        {{ rating.rating_from }}
+                      </span>
+                      <div class="text-xs text-gray-400 mt-1">
+                        ${{ (rating.target_from || 0).toFixed(2) }}
+                      </div>
+                    </div>
+                    <div class="text-blue-500 text-sm font-bold animate-pulse">→</div>
+                  </div>
+
+                  <!-- Current rating -->
                   <span
-                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                    class="inline-flex px-3 py-1.5 text-xs font-bold rounded-lg shadow-md border-2 border-opacity-20"
                     :class="getRatingBadgeClass(rating.rating_to)"
                   >
                     {{ rating.rating_to }}
                   </span>
-                  <div class="text-xs text-gray-600 mt-1">
+                  <div class="text-xs text-gray-700 mt-1 bg-blue-50 px-2 py-1 rounded-md">
                     ${{ (rating.target_to || 0).toFixed(2) }}
                   </div>
                 </div>
@@ -174,7 +193,9 @@
               </div>
 
               <!-- Time Period Selector -->
-              <div class="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+              <div
+                class="flex items-center space-x-1 bg-white border border-gray-200 rounded-lg p-1"
+              >
                 <button
                   v-for="period in chartPeriods"
                   :key="period.value"
@@ -208,7 +229,7 @@
 
             <div class="overflow-x-auto">
               <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="border-t border-b border-gray-200">
                   <tr>
                     <th
                       class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -221,17 +242,12 @@
                       Analyst Firm
                     </th>
                     <th
-                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Action
-                    </th>
-                    <th
-                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Rating
                     </th>
                     <th
-                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Price Target
                     </th>
@@ -249,23 +265,66 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="text-sm font-medium text-gray-900">{{ rating.brokerage }}</div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span
-                        class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800"
-                      >
-                        {{ rating.action || 'Updated' }}
-                      </span>
+                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                      <div class="flex items-center justify-end space-x-3">
+                        <!-- Previous Rating (if different) -->
+                        <div
+                          v-if="rating.rating_from && rating.rating_from !== rating.rating_to"
+                          class="opacity-60 text-right"
+                        >
+                          <span
+                            class="inline-flex px-2 py-1 text-xs font-medium rounded-lg bg-gray-100 text-gray-500 border line-through"
+                          >
+                            {{ rating.rating_from }}
+                          </span>
+                        </div>
+
+                        <!-- Animated Arrow (if there's a change) -->
+                        <div
+                          v-if="rating.rating_from && rating.rating_from !== rating.rating_to"
+                          class="text-blue-500 text-lg font-bold animate-pulse"
+                        >
+                          →
+                        </div>
+
+                        <!-- Current Rating -->
+                        <span
+                          class="inline-flex px-3 py-1.5 text-xs font-bold rounded-lg shadow-md border-2 border-opacity-20"
+                          :class="getRatingBadgeClass(rating.rating_to)"
+                        >
+                          {{ rating.rating_to }}
+                        </span>
+                      </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span
-                        class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                        :class="getRatingBadgeClass(rating.rating_to)"
-                      >
-                        {{ rating.rating_to }}
-                      </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${{ (rating.target_to || 0).toFixed(2) }}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                      <div class="flex items-center justify-end space-x-3">
+                        <!-- Previous Price Target (if different) -->
+                        <div
+                          v-if="rating.target_from && rating.target_from !== rating.target_to"
+                          class="text-right opacity-60"
+                        >
+                          <div
+                            class="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border line-through"
+                          >
+                            ${{ (rating.target_from || 0).toFixed(2) }}
+                          </div>
+                        </div>
+
+                        <!-- Animated Arrow (if there's a change) -->
+                        <div
+                          v-if="rating.target_from && rating.target_from !== rating.target_to"
+                          class="text-blue-500 text-lg font-bold animate-pulse"
+                        >
+                          →
+                        </div>
+
+                        <!-- Current Price Target -->
+                        <div
+                          class="text-xs font-bold text-gray-900 bg-blue-50 px-3 py-1.5 rounded-lg border-2 border-blue-200 shadow-sm"
+                        >
+                          ${{ (rating.target_to || 0).toFixed(2) }}
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 </tbody>

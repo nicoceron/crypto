@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-white">
     <!-- Navigation -->
     <nav class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mx-auto px-4 sm:px-6 lg:px-8" style="max-width: 1344px">
         <div class="flex justify-between h-16">
           <!-- Logo and main navigation -->
           <div class="flex">
@@ -121,9 +121,11 @@
     </div>
 
     <!-- Main content -->
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div class="px-4 py-6 sm:px-0">
-        <router-view />
+    <main class="mx-auto py-6 sm:px-6 lg:px-8" style="max-width: 1375px">
+      <div class="mx-auto px-4 sm:px-6 lg:px-8" style="max-width: 1375px">
+        <div class="px-4 py-6 sm:px-0">
+          <router-view />
+        </div>
       </div>
     </main>
   </div>
