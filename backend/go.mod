@@ -5,21 +5,23 @@ go 1.23
 toolchain go1.24.4
 
 require (
+	github.com/alpacahq/alpaca-trade-api-go/v3 v3.8.1
 	github.com/gin-gonic/gin v1.10.1
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
 	cloud.google.com/go v0.118.0 // indirect
-	github.com/alpacahq/alpaca-trade-api-go/v3 v3.8.1 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 )
 
 require (
