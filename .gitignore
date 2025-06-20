@@ -1,0 +1,64 @@
+# Go binaries and executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server
+# Go build artifacts
+*.o
+*.a
+*.out
+/vendor/
+/bin/
+/dist/
+
+# Environment and configuration files
+.env
+.env.local
+.env.*.local
+*.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js (for frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend build artifacts
+/frontend/dist/
+/frontend/.nuxt/
+/frontend/.next/
+/frontend/.vuepress/dist
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Test coverage
+*.cover
+*.out
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/ 

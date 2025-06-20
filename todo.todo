@@ -6,6 +6,6 @@ Frontend Deployment:
 Backend Deployment (GitHub Actions Pipeline):
     ☐ Configure GitHub Actions to build the Docker image from your Dockerfile on push.
     ☐ Upload the Docker image to Amazon's registry.
-    ☐ Deploy the backend using Amazon App Runner (taking the image from the registry).
-    ☐ Preferrably: Explore using AWS Lambda instead of App Runner for the backend.
+    ☐ Deploy the backend using Amazon Lambda (taking the image from the registry).
     ☐ Create a recommendation system for the backend that's actually good.
+    Preferrably: Explore using AWS Lambda instead of App Runner for the backend.
