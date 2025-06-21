@@ -291,9 +291,12 @@ const navigateToStock = (ticker: string) => {
 }
 
 // Lifecycle
-onMounted(() => {
-  if (stocksStore.recommendations.length === 0) {
-    stocksStore.fetchRecommendations()
+onMounted(async () => {
+  // Always fetch recommendations - the store will handle duplicate prevention
+  try {
+    await stocksStore.fetchRecommendations()
+  } catch (error) {
+    console.error('Failed to load recommendations:', error)
   }
 })
 </script>

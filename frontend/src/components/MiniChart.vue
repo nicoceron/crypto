@@ -2,7 +2,7 @@
   <div class="w-full h-full">
     <svg :width="width" :height="height" viewBox="0 0 80 32" class="w-full h-full">
       <polyline
-        v-if="!loading && dataPoints.length > 0"
+        v-if="dataPoints.length > 0"
         :points="trendPoints"
         fill="none"
         :stroke="trendColor"
@@ -11,10 +11,12 @@
         stroke-linejoin="round"
       />
       <!-- Loading indicator -->
-      <text v-if="loading" x="40" y="16" text-anchor="middle" font-size="8" fill="#666">...</text>
+      <text v-else-if="isLoading" x="40" y="16" text-anchor="middle" font-size="8" fill="#666">
+        ...
+      </text>
       <!-- Fallback to rating-based display if no price data -->
       <polyline
-        v-else-if="!loading && dataPoints.length === 0 && !error && fallbackPoints.length > 0"
+        v-else-if="fallbackPoints.length > 0"
         :points="fallbackTrendPoints"
         fill="none"
         :stroke="fallbackTrendColor"
@@ -24,22 +26,14 @@
         opacity="0.6"
       />
       <!-- No data indicator -->
-      <text
-        v-else-if="!loading && dataPoints.length === 0 && fallbackPoints.length === 0"
-        x="40"
-        y="16"
-        text-anchor="middle"
-        font-size="6"
-        fill="#999"
-      >
-        --
-      </text>
+      <text v-else x="40" y="16" text-anchor="middle" font-size="6" fill="#999">--</text>
     </svg>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed } from 'vue'
+import { useStocksStore } from '@/stores/stocks'
 
 interface Rating {
   target_to?: number
@@ -63,63 +57,35 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   width: 80,
   height: 32,
-  period: '1M',
+  period: '1W',
 })
 
-// Reactive state
-const loading = ref(false)
-const error = ref('')
-const priceData = ref<PriceBar[]>([])
+// Store
+const stocksStore = useStocksStore()
 
-// Fetch price data from API
-const fetchPriceData = async () => {
-  if (!props.symbol) return
+// Get price data from store (uses data from batch loading)
+const priceData = computed(() => {
+  if (!props.symbol) return []
 
-  loading.value = true
-  error.value = ''
+  const storeData = stocksStore.getPriceData(props.symbol)
+  if (!storeData?.bars) return []
 
-  try {
-    const response = await fetch(
-      `http://localhost:8080/api/v1/stocks/${props.symbol}/price?period=${props.period}`,
-    )
+  return storeData.bars.map((bar: any) => ({
+    timestamp: bar.timestamp,
+    close: bar.close,
+  }))
+})
 
-    if (!response.ok) {
-      // If API fails, we'll fall back to rating-based display
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const bars = data.bars || []
-
-    if (bars.length === 0) {
-      // No price data available
-      priceData.value = []
-      return
-    }
-
-    // Use all available data points for granular mini chart
-    const recentBars = bars.map((bar: any) => ({
-      timestamp: bar.timestamp,
-      close: bar.close,
-    }))
-
-    priceData.value = recentBars
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load'
-    priceData.value = []
-    // Don't show error in mini chart, just fall back to rating display
-  } finally {
-    loading.value = false
-  }
-}
+// Check if data is loading
+const isLoading = computed(() => {
+  return stocksStore.isPriceDataLoading(props.symbol)
+})
 
 // Calculate trend based on actual price data
 const trend = computed(() => {
   if (priceData.value.length < 2) return 'up'
-
   const firstPrice = priceData.value[0].close
   const lastPrice = priceData.value[priceData.value.length - 1].close
-
   return lastPrice >= firstPrice ? 'up' : 'down'
 })
 
@@ -134,25 +100,21 @@ const dataPoints = computed(() => {
   const prices = priceData.value.map((bar) => bar.close)
   const minPrice = Math.min(...prices)
   const maxPrice = Math.max(...prices)
-  const priceRange = maxPrice - minPrice || maxPrice * 0.01 // Avoid division by zero
+  const priceRange = maxPrice - minPrice || maxPrice * 0.01
 
   return priceData.value.map((bar, index) => {
     const x = (index / Math.max(1, priceData.value.length - 1)) * 80
-
-    // Normalize price to Y coordinate (invert Y axis)
     const normalizedPrice = (bar.close - minPrice) / priceRange
-    const y = 30 - normalizedPrice * 28 + 2 // Map to 2-30 range, inverted
-
+    const y = 30 - normalizedPrice * 28 + 2
     return { x, y: Math.max(2, Math.min(30, y)) }
   })
 })
 
-// Convert data points to SVG polyline points string
 const trendPoints = computed(() => {
   return dataPoints.value.map((point) => `${point.x},${point.y}`).join(' ')
 })
 
-// Fallback: Generate simple trend based on rating data (for when price API fails)
+// Fallback: Generate simple trend based on rating data
 const fallbackTrend = computed(() => {
   if (!props.rating) return 'up'
 
@@ -160,20 +122,18 @@ const fallbackTrend = computed(() => {
   const targetFrom = props.rating.target_from || 0
   const ratingTo = props.rating.rating_to?.toLowerCase() || ''
 
-  // Determine trend based on multiple factors
   if (targetTo > targetFrom) return 'up'
   if (targetTo < targetFrom) return 'down'
   if (ratingTo.includes('buy') || ratingTo.includes('strong')) return 'up'
   if (ratingTo.includes('sell')) return 'down'
 
-  return 'up' // Default
+  return 'up'
 })
 
 const fallbackTrendColor = computed(() => {
   return fallbackTrend.value === 'up' ? '#10b981' : '#ef4444'
 })
 
-// Simple fallback points (straight line trend)
 const fallbackPoints = computed(() => {
   if (!props.rating) return []
 
@@ -190,18 +150,6 @@ const fallbackPoints = computed(() => {
 const fallbackTrendPoints = computed(() => {
   return fallbackPoints.value.map((point) => `${point.x},${point.y}`).join(' ')
 })
-
-// Load data on mount and when symbol changes
-onMounted(() => {
-  fetchPriceData()
-})
-
-watch(
-  () => props.symbol,
-  () => {
-    fetchPriceData()
-  },
-)
 </script>
 
 <style scoped>

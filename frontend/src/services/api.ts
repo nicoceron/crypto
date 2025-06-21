@@ -7,12 +7,32 @@ import type {
   ApiError,
 } from '@/types'
 
+// Additional types for stock data
+interface StockLogoResponse {
+  symbol: string
+  logo_url: string
+}
+
+interface StockPriceResponse {
+  symbol: string
+  bars: Array<{
+    timestamp: string
+    open: number
+    high: number
+    low: number
+    close: number
+    volume: number
+  }>
+}
+
 class ApiService {
   private api: AxiosInstance
 
   constructor() {
     this.api = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
+      baseURL: import.meta.env.VITE_API_BASE_URL
+        ? `${import.meta.env.VITE_API_BASE_URL}/api/v1`
+        : 'http://localhost:8080/api/v1',
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
@@ -84,6 +104,32 @@ class ApiService {
     return response.data
   }
 
+  // Get stock logo
+  async getStockLogo(
+    symbol: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<StockLogoResponse> {
+    const response = await this.api.get<StockLogoResponse>(`/stocks/${symbol}/logo`, {
+      signal: options?.signal,
+    })
+    return response.data
+  }
+
+  // Get stock price data
+  async getStockPrice(
+    symbol: string,
+    period: string = '1W',
+    options?: { signal?: AbortSignal },
+  ): Promise<StockPriceResponse> {
+    const response = await this.api.get<StockPriceResponse>(
+      `/stocks/${symbol}/price?period=${period}`,
+      {
+        signal: options?.signal,
+      },
+    )
+    return response.data
+  }
+
   // Trigger data ingestion (admin function)
   async triggerIngestion(): Promise<{ message: string; status: string }> {
     const response = await this.api.post<{ message: string; status: string }>('/ingest')
@@ -93,7 +139,9 @@ class ApiService {
   // Health check
   async healthCheck(): Promise<{ status: string; service: string; timestamp: string }> {
     // Health endpoint is at root level, not under /api/v1
-    const response = await axios.get('http://localhost:8080/health')
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    const healthURL = `${baseURL}/health`
+    const response = await axios.get(healthURL)
     return response.data
   }
 

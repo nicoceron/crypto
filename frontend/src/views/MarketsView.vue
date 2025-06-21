@@ -1,20 +1,14 @@
 <template>
   <div class="space-y-4">
-    <!-- Page header with total market stats -->
+    <!-- Page header -->
     <div class="bg-white p-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900">Stock Markets</h1>
-          <p class="text-sm text-gray-600 mt-1">
-            The global stock market ratings today.
-            <span class="text-red-600">📉 -1.2%</span> change in the last 24 hours.
-            <button class="text-blue-600 hover:underline ml-1">Read more</button>
-          </p>
-        </div>
-        <div class="text-right">
-          <div class="text-2xl font-bold text-gray-900">$2,847,392,841,820</div>
-          <div class="text-sm text-gray-500">Total Market Cap 📉 -1.2%</div>
-        </div>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Stock Markets</h1>
+        <p class="text-sm text-gray-600 mt-1">
+          The global stock market ratings today.
+          <span class="text-red-600">📉 -1.2%</span> change in the last 24 hours.
+          <button class="text-blue-600 hover:underline ml-1">Read more</button>
+        </p>
       </div>
     </div>
 
@@ -31,11 +25,10 @@
           </router-link>
         </div>
 
-        <div v-if="stocksStore.recommendations.length === 0" class="text-center py-4">
-          <div class="text-gray-500">Loading recommendations...</div>
-        </div>
-
-        <div v-else class="space-y-4 flex-1">
+        <div
+          v-if="stocksStore.recommendations && stocksStore.recommendations.length > 0"
+          class="space-y-4 flex-1"
+        >
           <div
             v-for="rec in stocksStore.topRecommendations.slice(0, 2)"
             :key="rec.ticker"
@@ -74,14 +67,10 @@
           <button class="text-blue-600 hover:underline text-sm">View more →</button>
         </div>
 
-        <div v-if="recentUpgrades.length === 0" class="text-center py-4">
-          <div class="text-gray-500">Loading recent upgrades...</div>
-        </div>
-
-        <div v-else class="space-y-2 flex-1">
+        <div v-if="recentUpgrades && recentUpgrades.length > 0" class="space-y-2 flex-1">
           <div
-            v-for="rating in recentUpgrades.slice(0, 3)"
-            :key="rating.rating_id"
+            v-for="(rating, index) in recentUpgrades.slice(0, 3)"
+            :key="`upgrade-${rating.ticker}-${index}`"
             class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100"
             @click="$router.push(`/stock/${rating.ticker}`)"
           >
@@ -263,7 +252,7 @@
           <tbody class="bg-white divide-y divide-gray-100">
             <tr
               v-for="(rating, index) in sortedRatings"
-              :key="rating.rating_id"
+              :key="`rating-${rating.ticker}-${index}`"
               class="hover:bg-gray-50 cursor-pointer"
               @click="$router.push(`/stock/${rating.ticker}`)"
             >
@@ -416,15 +405,20 @@
             <p class="text-sm text-gray-700">
               Showing
               <span class="font-medium">
-                {{ (stocksStore.currentPage - 1) * pageSize + 1 }}
+                {{ (stocksStore.currentPage - 1) * stocksStore.pageLimit + 1 }}
               </span>
               to
               <span class="font-medium">
-                {{ Math.min(stocksStore.currentPage * pageSize, stocksStore.totalRatings) }}
+                {{
+                  (stocksStore.currentPage - 1) * stocksStore.pageLimit + stocksStore.ratings.length
+                }}
               </span>
               of
               <span class="font-medium">{{ stocksStore.totalRatings.toLocaleString() }}</span>
               results
+              <span v-if="stocksStore.ratings.length < stocksStore.pageLimit" class="text-gray-500">
+                ({{ stocksStore.pageLimit - stocksStore.ratings.length }} filtered as duplicates)
+              </span>
             </p>
           </div>
           <div>
@@ -518,7 +512,10 @@ const visiblePages = computed(() => {
 })
 
 const recentUpgrades = computed(() => {
-  return sortedRatings.value
+  const sorted = sortedRatings.value
+  if (!Array.isArray(sorted)) return []
+
+  return sorted
     .filter((rating) => rating.rating_to && rating.rating_to.toLowerCase().includes('buy'))
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
 })
@@ -587,8 +584,12 @@ const getRatingPriority = (rating: string): number => {
 
 // Computed property for sorted ratings
 const sortedRatings = computed(() => {
+  const ratings = stocksStore.ratings
+  if (!Array.isArray(ratings)) return []
+
+  // No need for deduplication here since it's now handled at the store level
   if (sortBy.value === 'rating_to') {
-    return [...stocksStore.ratings].sort((a, b) => {
+    return [...ratings].sort((a, b) => {
       const priorityA = getRatingPriority(a.rating_to || '')
       const priorityB = getRatingPriority(b.rating_to || '')
 
@@ -599,7 +600,7 @@ const sortedRatings = computed(() => {
       }
     })
   } else {
-    return stocksStore.ratings
+    return ratings
   }
 })
 
@@ -646,12 +647,15 @@ const getSortIconColor = (column: string, direction: 'asc' | 'desc') => {
 }
 
 // Lifecycle
-onMounted(() => {
-  if (stocksStore.ratings.length === 0) {
-    stocksStore.fetchRatings()
-  }
-  if (stocksStore.recommendations.length === 0) {
-    stocksStore.fetchRecommendations()
+onMounted(async () => {
+  console.log('🔄 MarketsView mounted, loading data...')
+
+  // Always fetch data for MarketsView - the store will handle duplicate prevention
+  // This ensures we have fresh data when the user navigates to this view
+  try {
+    await Promise.all([stocksStore.fetchRatings(), stocksStore.fetchRecommendations()])
+  } catch (error) {
+    console.error('Failed to load data:', error)
   }
 })
 </script>

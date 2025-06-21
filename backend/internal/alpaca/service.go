@@ -3,6 +3,7 @@ package alpaca
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/alpacahq/alpaca-trade-api-go/v3/marketdata"
@@ -42,12 +43,41 @@ type Quote struct {
 	AskSize   int64   `json:"ask_size"`
 }
 
-// Service handles Alpaca API interactions using the official SDK
-type Service struct {
-	client *marketdata.Client
+// RateLimiter implements a simple rate limiter for API calls
+type RateLimiter struct {
+	lastCall time.Time
+	mutex    sync.Mutex
+	delay    time.Duration
 }
 
-// NewService creates a new Alpaca service using the official SDK
+// NewRateLimiter creates a new rate limiter with the specified delay between calls
+func NewRateLimiter(delay time.Duration) *RateLimiter {
+	return &RateLimiter{
+		delay: delay,
+	}
+}
+
+// Wait blocks until it's safe to make the next API call
+func (rl *RateLimiter) Wait() {
+	rl.mutex.Lock()
+	defer rl.mutex.Unlock()
+	
+	elapsed := time.Since(rl.lastCall)
+	if elapsed < rl.delay {
+		waitTime := rl.delay - elapsed
+		fmt.Printf("⏳ Rate limiting: waiting %v before next API call\n", waitTime)
+		time.Sleep(waitTime)
+	}
+	rl.lastCall = time.Now()
+}
+
+// Service handles Alpaca API interactions using the official SDK
+type Service struct {
+	client      *marketdata.Client
+	rateLimiter *RateLimiter
+}
+
+// NewService creates a new Alpaca service with rate limiting
 func NewService(apiKey, apiSecret string) *Service {
 	// Create Alpaca client using official SDK
 	alpacaClient := marketdata.NewClient(marketdata.ClientOpts{
@@ -57,7 +87,8 @@ func NewService(apiKey, apiSecret string) *Service {
 	})
 
 	return &Service{
-		client: alpacaClient,
+		client:      alpacaClient,
+		rateLimiter: NewRateLimiter(250 * time.Millisecond), // 4 requests per second max
 	}
 }
 
@@ -85,9 +116,12 @@ func (s *Service) parseTimeFrame(timeframe string) marketdata.TimeFrame {
 	}
 }
 
-// GetHistoricalBars fetches historical price data from Alpaca API
+// GetHistoricalBars fetches historical price data from Alpaca API with rate limiting
 func (s *Service) GetHistoricalBars(ctx context.Context, symbol string, timeframe string, start, end time.Time) ([]PriceBar, error) {
-	fmt.Printf("🔸 ALPACA SERVICE: GetHistoricalBars called for %s (%s) from %s to %s (%.1f hours)\n", 
+	// Apply rate limiting
+	s.rateLimiter.Wait()
+	
+	fmt.Printf("🔸 ALPACA SERVICE: GetHistoricalBars called for %s (%s) from %s to %s (%.1f hours) - WITH RATE LIMITING\n", 
 		symbol, timeframe, start.Format("2006-01-02 15:04"), end.Format("2006-01-02 15:04"), end.Sub(start).Hours())
 	return s.getAlpacaBars(ctx, symbol, timeframe, start, end)
 }
@@ -111,7 +145,7 @@ func (s *Service) getAlpacaBars(ctx context.Context, symbol string, timeframe st
 	// Get bars using official SDK (single symbol)
 	bars, err := s.client.GetBars(symbol, req)
 	if err != nil {
-		fmt.Printf("Alpaca API error for %s (%s): %v\n", symbol, timeframe, err)
+		fmt.Printf("🔴 Alpaca API error for %s (%s): %v\n", symbol, timeframe, err)
 		return nil, fmt.Errorf("failed to get bars from Alpaca: %w", err)
 	}
 
@@ -141,20 +175,22 @@ func (s *Service) getAlpacaBars(ctx context.Context, symbol string, timeframe st
 
 // GetSnapshot fetches current market snapshot for a symbol
 func (s *Service) GetSnapshot(ctx context.Context, symbol string) (*Snapshot, error) {
-	fmt.Printf("🔸 ALPACA SERVICE: GetSnapshot called for %s\n", symbol)
+	// Apply rate limiting
+	s.rateLimiter.Wait()
 	
-	// Get snapshot using official SDK (v3 method)
+	fmt.Printf("🔸 ALPACA SERVICE: GetSnapshot called for %s\n", symbol)
+
 	req := marketdata.GetSnapshotRequest{
 		Feed: marketdata.IEX,
 	}
+
 	snapshot, err := s.client.GetSnapshot(symbol, req)
 	if err != nil {
-		fmt.Printf("Alpaca snapshot API error for %s: %v\n", symbol, err)
 		return nil, fmt.Errorf("failed to get snapshot from Alpaca: %w", err)
 	}
 
 	if snapshot == nil {
-		return nil, fmt.Errorf("no snapshot data found for symbol %s", symbol)
+		return nil, fmt.Errorf("no snapshot data available for symbol %s", symbol)
 	}
 
 	// Convert to our format
@@ -162,7 +198,7 @@ func (s *Service) GetSnapshot(ctx context.Context, symbol string) (*Snapshot, er
 		Symbol: symbol,
 	}
 
-	// Latest trade
+	// Convert latest trade if available
 	if snapshot.LatestTrade != nil {
 		result.LatestTrade = &Trade{
 			Timestamp: snapshot.LatestTrade.Timestamp.Format(time.RFC3339),
@@ -171,7 +207,7 @@ func (s *Service) GetSnapshot(ctx context.Context, symbol string) (*Snapshot, er
 		}
 	}
 
-	// Latest quote
+	// Convert latest quote if available
 	if snapshot.LatestQuote != nil {
 		result.LatestQuote = &Quote{
 			Timestamp: snapshot.LatestQuote.Timestamp.Format(time.RFC3339),
@@ -182,7 +218,7 @@ func (s *Service) GetSnapshot(ctx context.Context, symbol string) (*Snapshot, er
 		}
 	}
 
-	// Minute bar
+	// Convert bars if available
 	if snapshot.MinuteBar != nil {
 		result.MinuteBar = &PriceBar{
 			Timestamp: snapshot.MinuteBar.Timestamp.Format(time.RFC3339),
@@ -194,7 +230,6 @@ func (s *Service) GetSnapshot(ctx context.Context, symbol string) (*Snapshot, er
 		}
 	}
 
-	// Daily bar
 	if snapshot.DailyBar != nil {
 		result.DailyBar = &PriceBar{
 			Timestamp: snapshot.DailyBar.Timestamp.Format(time.RFC3339),
@@ -206,7 +241,6 @@ func (s *Service) GetSnapshot(ctx context.Context, symbol string) (*Snapshot, er
 		}
 	}
 
-	// Previous daily bar
 	if snapshot.PrevDailyBar != nil {
 		result.PrevDailyBar = &PriceBar{
 			Timestamp: snapshot.PrevDailyBar.Timestamp.Format(time.RFC3339),
@@ -218,48 +252,23 @@ func (s *Service) GetSnapshot(ctx context.Context, symbol string) (*Snapshot, er
 		}
 	}
 
-	fmt.Printf("✅ Alpaca snapshot SUCCESS for %s\n", symbol)
 	return result, nil
 }
 
-// GetRecentBars gets recent historical data (last 30 days with 1D timeframe)
+// GetRecentBars fetches the most recent bars for a symbol (convenience method)
 func (s *Service) GetRecentBars(ctx context.Context, symbol string) ([]PriceBar, error) {
 	end := time.Now()
-	start := end.AddDate(0, 0, -30) // 30 days ago
-
-	return s.GetHistoricalBars(ctx, symbol, "1Day", start, end)
+	start := end.Add(-24 * time.Hour)
+	return s.GetHistoricalBars(ctx, symbol, "1Hour", start, end)
 }
 
-// IsMarketHours checks if current time is during market hours (9:30 AM - 4:00 PM ET)
+// IsMarketHours checks if the current time is during market hours
 func (s *Service) IsMarketHours() bool {
 	now := time.Now()
+	// Simple US market hours check (9:30 AM - 4:00 PM ET, Monday-Friday)
+	// This is a simplified version; production code might use more sophisticated timezone handling
+	hour := now.Hour()
+	weekday := now.Weekday()
 	
-	// Convert to ET timezone
-	et, err := time.LoadLocation("America/New_York")
-	if err != nil {
-		return false
-	}
-	
-	nowET := now.In(et)
-	
-	// Check if it's a weekday
-	if nowET.Weekday() == time.Saturday || nowET.Weekday() == time.Sunday {
-		return false
-	}
-	
-	// Check if it's during market hours (9:30 AM - 4:00 PM ET)
-	hour := nowET.Hour()
-	minute := nowET.Minute()
-	
-	// Market opens at 9:30 AM
-	if hour < 9 || (hour == 9 && minute < 30) {
-		return false
-	}
-	
-	// Market closes at 4:00 PM
-	if hour >= 16 {
-		return false
-	}
-	
-	return true
+	return weekday >= time.Monday && weekday <= time.Friday && hour >= 9 && hour < 16
 } 

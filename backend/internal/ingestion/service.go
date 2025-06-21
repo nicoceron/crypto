@@ -158,6 +158,9 @@ func (s *Service) makeRequestWithRetry(ctx context.Context, req *http.Request, m
 // transformAPIRatings converts API response items to domain models
 func (s *Service) transformAPIRatings(apiRatings []domain.APIStockRating) ([]domain.StockRating, error) {
 	ratings := make([]domain.StockRating, 0, len(apiRatings))
+	
+	// Use a map to track unique ratings and prevent duplicates
+	uniqueRatings := make(map[string]domain.StockRating)
 
 	for _, apiRating := range apiRatings {
 		// Parse time
@@ -200,8 +203,30 @@ func (s *Service) transformAPIRatings(apiRatings []domain.APIStockRating) ([]dom
 			CreatedAt:  time.Now(),
 		}
 
+		// Create unique key to prevent duplicates
+		uniqueKey := fmt.Sprintf("%s-%s-%s-%s-%s", 
+			rating.Ticker, 
+			rating.Brokerage, 
+			rating.RatingTo, 
+			rating.Time.Format(time.RFC3339),
+			rating.Action)
+
+		// Only add if this combination doesn't exist yet
+		if _, exists := uniqueRatings[uniqueKey]; !exists {
+			uniqueRatings[uniqueKey] = rating
+		} else {
+			fmt.Printf("🔄 Skipping duplicate rating: %s - %s - %s\n", 
+				rating.Ticker, rating.Brokerage, rating.RatingTo)
+		}
+	}
+
+	// Convert map back to slice
+	for _, rating := range uniqueRatings {
 		ratings = append(ratings, rating)
 	}
+
+	fmt.Printf("📊 Filtered ratings: %d → %d (removed %d duplicates)\n", 
+		len(apiRatings), len(ratings), len(apiRatings)-len(ratings))
 
 	return ratings, nil
 }

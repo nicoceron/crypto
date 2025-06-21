@@ -449,9 +449,8 @@ const loadPriceData = async () => {
   if (!currentTicker) return
 
   try {
-    const response = await fetch(
-      `http://localhost:8080/api/v1/stocks/${currentTicker}/price?period=1M`,
-    )
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    const response = await fetch(`${baseURL}/api/v1/stocks/${currentTicker}/price?period=1M`)
     if (!response.ok) {
       throw new Error('Failed to load price data')
     }
@@ -493,14 +492,6 @@ const formatDate = (dateString: string | null) => {
     console.error('Date formatting error:', error)
     return 'Invalid Date'
   }
-}
-
-const getRatingColor = (rating: string) => {
-  const ratingLower = rating.toLowerCase()
-  if (ratingLower.includes('buy') || ratingLower.includes('strong buy')) return 'bg-green-500'
-  if (ratingLower.includes('hold') || ratingLower.includes('neutral')) return 'bg-yellow-500'
-  if (ratingLower.includes('sell')) return 'bg-red-500'
-  return 'bg-gray-500'
 }
 
 const getRatingBadgeClass = (rating: string | null) => {

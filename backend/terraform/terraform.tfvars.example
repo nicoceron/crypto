@@ -1,0 +1,27 @@
+# AWS Configuration
+aws_region = "us-west-2"
+
+# Project Configuration
+project_name = "stock-analyzer"
+environment  = "dev"
+
+# Network Configuration
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-west-2a", "us-west-2b"]
+
+# Database Configuration - CockroachDB Serverless
+cockroachdb_connection_string = "postgresql://username:password@cluster-name.cockroachlabs.cloud:26257/defaultdb?sslmode=require"
+
+# Application Configuration - Replace with your actual values
+alpaca_api_key    = "your-alpaca-api-key"
+alpaca_api_secret = "your-alpaca-api-secret"
+stock_api_url     = "https://8j5baasof2.execute-api.us-west-2.amazonaws.com/production/swechallenge/list"
+stock_api_token   = "your-stock-api-token"
+
+# Common Tags
+common_tags = {
+  Project     = "stock-analyzer"
+  Environment = "dev"
+  ManagedBy   = "terraform"
+  Owner       = "your-name"
+} 

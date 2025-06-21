@@ -88,9 +88,10 @@ const loadChartData = async () => {
   error.value = ''
 
   try {
-    const response = await fetch(
-      `http://localhost:8080/api/v1/stocks/${props.symbol}/price?period=${selectedPeriod.value}`,
-    )
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    const url = `${baseURL}/api/v1/stocks/${props.symbol}/price?period=${selectedPeriod.value}`
+    console.log(`🔍 StockChart ${props.symbol}: Fetching from ${url}`)
+    const response = await fetch(url)
     if (!response.ok) {
       throw new Error(`Failed to load chart data: ${response.statusText}`)
     }

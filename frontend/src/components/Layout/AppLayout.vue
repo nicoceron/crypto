@@ -38,27 +38,6 @@
 
           <!-- Right side items -->
           <div class="flex items-center space-x-4">
-            <!-- Data refresh indicator -->
-            <div
-              v-if="stocksStore.lastUpdated"
-              class="hidden md:flex items-center text-sm text-gray-500"
-            >
-              <ClockIcon class="w-4 h-4 mr-1" />
-              Last updated: {{ formatLastUpdated }}
-            </div>
-
-            <!-- Refresh button -->
-            <button
-              @click="refreshData"
-              :disabled="stocksStore.isLoading"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ArrowPathIcon
-                :class="[stocksStore.isLoading ? 'animate-spin' : '', 'w-4 h-4 mr-2']"
-              />
-              {{ stocksStore.isLoading ? 'Loading...' : 'Refresh' }}
-            </button>
-
             <!-- Mobile menu button -->
             <button
               @click="mobileMenuOpen = !mobileMenuOpen"
@@ -136,7 +115,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   ChartBarIcon,
-  ClockIcon,
   ArrowPathIcon,
   Bars3Icon,
   XMarkIcon,
@@ -160,16 +138,6 @@ const navigation = ref<NavItem[]>([
   { name: 'Recommendations', href: '/recommendations', icon: StarIcon, current: false },
 ])
 
-// Computed
-const formatLastUpdated = computed(() => {
-  if (!stocksStore.lastUpdated) return ''
-  return new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).format(stocksStore.lastUpdated)
-})
-
 // Update navigation current state based on route
 const updateNavigationState = () => {
   navigation.value.forEach((item) => {
@@ -178,20 +146,11 @@ const updateNavigationState = () => {
   })
 }
 
-// Methods
-const refreshData = async () => {
-  try {
-    await Promise.all([stocksStore.fetchRatings(), stocksStore.fetchRecommendations()])
-  } catch (error) {
-    console.error('Failed to refresh data:', error)
-  }
-}
-
 // Lifecycle
 onMounted(() => {
   updateNavigationState()
-  // Initial data load
-  refreshData()
+  // Don't fetch data here - let individual views handle their own data needs
+  // This prevents duplicate API calls when AppLayout and views both try to fetch on mount
 })
 
 // Watch route changes to update navigation

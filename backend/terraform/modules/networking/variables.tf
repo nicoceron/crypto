@@ -1,19 +1,16 @@
-# Variables for Networking Module
-
-variable "app_name" {
-  description = "Name of the application"
+variable "project_name" {
+  description = "Name of the project"
   type        = string
 }
 
 variable "environment" {
-  description = "Environment name (dev, staging, prod)"
+  description = "Environment name (e.g., dev, staging, prod)"
   type        = string
 }
 
 variable "vpc_cidr" {
-  description = "CIDR block for VPC"
+  description = "CIDR block for the VPC"
   type        = string
-  default     = "10.0.0.0/16"
 }
 
 variable "availability_zones" {
@@ -21,7 +18,7 @@ variable "availability_zones" {
   type        = list(string)
 }
 
-variable "tags" {
+variable "common_tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)
   default     = {}

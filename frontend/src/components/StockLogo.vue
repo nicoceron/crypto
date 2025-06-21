@@ -5,23 +5,17 @@
       :src="logoUrl"
       :alt="`${symbol} logo`"
       @error="handleImageError"
-      @load="handleImageLoad"
       class="logo-image"
-      :class="{ loading: loading }"
     />
     <div v-else class="logo-fallback" :style="{ backgroundColor: fallbackColor }">
       <span class="logo-text">{{ symbolInitials }}</span>
-    </div>
-
-    <!-- Loading spinner overlay -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="spinner"></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { useStocksStore } from '@/stores/stocks'
 
 interface Props {
   symbol: string
@@ -34,10 +28,17 @@ const props = withDefaults(defineProps<Props>(), {
   shape: 'rounded',
 })
 
-// Reactive state
-const logoUrl = ref('')
-const loading = ref(false)
+// Store
+const stocksStore = useStocksStore()
+
+// Local state
 const imageError = ref(false)
+
+// Get logo URL from store (uses cached data from batch loading)
+const logoUrl = computed(() => {
+  if (!props.symbol) return ''
+  return stocksStore.getLogoUrl(props.symbol)
+})
 
 // Computed properties
 const sizeClass = computed(() => `size-${props.size} shape-${props.shape}`)
@@ -70,54 +71,10 @@ const fallbackColor = computed(() => {
   return colors[Math.abs(hash) % colors.length]
 })
 
-// Methods
-const loadLogo = async () => {
-  if (!props.symbol) return
-
-  loading.value = true
-  imageError.value = false
-
-  try {
-    const response = await fetch(`http://localhost:8080/api/v1/stocks/${props.symbol}/logo`)
-    if (response.ok) {
-      const data = await response.json()
-      logoUrl.value = data.logo_url
-    } else {
-      throw new Error('Logo not found')
-    }
-  } catch {
-    console.log(`Logo not found for ${props.symbol}, using fallback`)
-    imageError.value = true
-  } finally {
-    loading.value = false
-  }
-}
-
 const handleImageError = () => {
+  console.log(`💥 ${props.symbol}: Image failed to load, showing initials`)
   imageError.value = true
-  loading.value = false
 }
-
-const handleImageLoad = () => {
-  loading.value = false
-}
-
-// Watch for symbol changes
-watch(
-  () => props.symbol,
-  () => {
-    if (props.symbol) {
-      loadLogo()
-    }
-  },
-  { immediate: true },
-)
-
-onMounted(() => {
-  if (props.symbol) {
-    loadLogo()
-  }
-})
 </script>
 
 <style scoped>
@@ -161,54 +118,36 @@ onMounted(() => {
 
 /* Logo image */
 .logo-image {
-  @apply w-full h-full object-contain transition-opacity duration-200;
+  @apply w-full h-full object-contain;
 }
 
-.logo-image.loading {
-  @apply opacity-50;
-}
-
-/* Fallback */
+/* Logo fallback */
 .logo-fallback {
-  @apply w-full h-full flex items-center justify-center text-white font-semibold;
+  @apply w-full h-full flex items-center justify-center text-white font-bold;
 }
 
+.logo-text {
+  @apply text-xs font-bold;
+}
+
+/* Responsive text sizing */
 .size-xs .logo-text {
   @apply text-xs;
 }
 
 .size-sm .logo-text {
-  @apply text-sm;
+  @apply text-xs;
 }
 
 .size-md .logo-text {
-  @apply text-base;
+  @apply text-sm;
 }
 
 .size-lg .logo-text {
-  @apply text-lg;
+  @apply text-base;
 }
 
 .size-xl .logo-text {
-  @apply text-xl;
-}
-
-/* Loading overlay */
-.loading-overlay {
-  @apply absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center;
-}
-
-.spinner {
-  @apply w-4 h-4 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin;
-}
-
-.size-xs .spinner,
-.size-sm .spinner {
-  @apply w-3 h-3 border;
-}
-
-.size-lg .spinner,
-.size-xl .spinner {
-  @apply w-6 h-6 border-2;
+  @apply text-lg;
 }
 </style>

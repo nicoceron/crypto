@@ -109,8 +109,9 @@ func (h *Handlers) GetStockPrice(c *gin.Context) {
 	fmt.Printf("🔹 HANDLER: Final date range for %s period %s: %s to %s (%.0f days)\n", symbol, period, start.Format("2006-01-02"), end.Format("2006-01-02"), end.Sub(start).Hours()/24)
 	alpacaBars, err := h.alpacaSvc.GetHistoricalBars(c.Request.Context(), symbol, timeframe, start, end)
 	if err != nil {
-		fmt.Printf("Error fetching data from Alpaca for %s: %v\n", symbol, err)
-		HandleError(c, apperrors.ErrUpstreamAPIFailure.WithDetails(fmt.Sprintf("Failed to fetch price data: %v", err)))
+		fmt.Printf("🔴 ERROR fetching data from Alpaca for %s: %v\n", symbol, err)
+		// Return the raw error for debugging instead of wrapping it
+		HandleError(c, err)
 		return
 	}
 
@@ -150,12 +151,14 @@ func (h *Handlers) GetStockPrice(c *gin.Context) {
 func (h *Handlers) GetStockLogo(c *gin.Context) {
 	symbol := c.Param("symbol")
 	if symbol == "" {
+		fmt.Printf("🔴 ERROR in GetStockLogo: symbol parameter is required\n")
 		HandleError(c, apperrors.ErrValidationFailure.WithDetails("symbol parameter is required"))
 		return
 	}
 
 	// Convert to uppercase for consistency
 	symbol = strings.ToUpper(symbol)
+	fmt.Printf("🔍 HANDLER: Getting logo for symbol: %s\n", symbol)
 
 	// Use Clearbit Logo API as primary source with fallbacks
 	logoURL := fmt.Sprintf("https://logo.clearbit.com/%s.com", strings.ToLower(symbol))
@@ -165,6 +168,11 @@ func (h *Handlers) GetStockLogo(c *gin.Context) {
 		LogoURL: logoURL,
 	}
 
+	// Add caching headers for logo responses (cache for 1 hour)
+	c.Header("Cache-Control", "public, max-age=3600")
+	c.Header("ETag", fmt.Sprintf(`"%s"`, symbol))
+	
+	fmt.Printf("✅ HANDLER: Successfully returning logo URL for %s: %s\n", symbol, logoURL)
 	c.JSON(http.StatusOK, response)
 }
 
@@ -196,11 +204,14 @@ func (h *Handlers) GetStockRatings(c *gin.Context) {
 	search := c.Query("search")
 
 	// Get ratings from repository
+	fmt.Printf("🔍 HANDLER: Getting ratings - page:%d, limit:%d, sortBy:%s, order:%s, search:%s\n", page, limit, sortBy, order, search)
 	ratings, totalCount, err := h.stockRepo.GetStockRatings(c.Request.Context(), page, limit, sortBy, order, search)
 	if err != nil {
+		fmt.Printf("🔴 ERROR in GetStockRatings: %v\n", err)
 		HandleError(c, err)
 		return
 	}
+	fmt.Printf("✅ HANDLER: Successfully retrieved %d ratings (total: %d)\n", len(ratings), totalCount)
 
 	// Calculate pagination metadata
 	totalPages := int(math.Ceil(float64(totalCount) / float64(limit)))
@@ -242,12 +253,15 @@ func (h *Handlers) GetStockRatingsByTicker(c *gin.Context) {
 
 // GetRecommendations retrieves stock recommendations
 func (h *Handlers) GetRecommendations(c *gin.Context) {
+	fmt.Printf("🔍 HANDLER: Starting GetRecommendations\n")
 	recommendations, err := h.recommendationSvc.GetCachedRecommendations(c.Request.Context())
 	if err != nil {
+		fmt.Printf("🔴 ERROR in GetRecommendations: %v\n", err)
 		HandleError(c, err)
 		return
 	}
 
+	fmt.Printf("✅ HANDLER: Successfully retrieved %d recommendations\n", len(recommendations))
 	c.JSON(http.StatusOK, recommendations)
 }
 

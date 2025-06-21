@@ -58,25 +58,35 @@ func (r *PostgresRepository) CreateStockRatingsBatch(ctx context.Context, rating
 		INSERT INTO stock_ratings (
 			rating_id, ticker, company, brokerage, action, 
 			rating_from, rating_to, target_from, target_to, time
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (ticker, brokerage, rating_to, time) DO NOTHING`)
 	if err != nil {
 		return apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to prepare statement")
 	}
 	defer stmt.Close()
 
+	insertedCount := 0
 	for _, rating := range ratings {
-		_, err := stmt.ExecContext(ctx,
+		result, err := stmt.ExecContext(ctx,
 			rating.RatingID, rating.Ticker, rating.Company, rating.Brokerage,
 			rating.Action, rating.RatingFrom, rating.RatingTo, rating.TargetFrom,
 			rating.TargetTo, rating.Time)
 		if err != nil {
 			return apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to insert rating")
 		}
+		
+		// Check if a row was actually inserted
+		if rowsAffected, err := result.RowsAffected(); err == nil && rowsAffected > 0 {
+			insertedCount++
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		return apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to commit transaction")
 	}
+
+	fmt.Printf("📊 Database batch insert: %d attempted → %d inserted (skipped %d duplicates)\n", 
+		len(ratings), insertedCount, len(ratings)-insertedCount)
 
 	return nil
 }

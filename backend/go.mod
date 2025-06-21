@@ -6,6 +6,8 @@ toolchain go1.24.4
 
 require (
 	github.com/alpacahq/alpaca-trade-api-go/v3 v3.8.1
+	github.com/aws/aws-lambda-go v1.46.0
+	github.com/awslabs/aws-lambda-go-api-proxy v0.16.0
 	github.com/gin-gonic/gin v1.10.1
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
