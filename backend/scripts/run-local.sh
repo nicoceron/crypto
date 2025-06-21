@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Run backend locally with all necessary environment variables
+# IMPORTANT: Replace placeholder values with your actual credentials
 export DATABASE_URL="<YOUR_DATABASE_URL>"
 export PORT="8080"
 export ALPACA_API_KEY="<YOUR_ALPACA_API_KEY>"
