@@ -2,6 +2,9 @@
 
 A full-stack stock analysis and recommendation platform that provides real-time market data, analyst ratings, and AI-generated investment recommendations.
 
+<img width="1393" alt="image" src="https://github.com/user-attachments/assets/746b4032-9354-46be-b4d2-9d1eb7903417" />
+
+
 ## 🚀 Features
 
 ### 📊 Market Analysis
