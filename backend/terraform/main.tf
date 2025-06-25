@@ -41,7 +41,7 @@ module "lambda" {
   project_name           = var.project_name
   environment            = var.environment
   vpc_id                = module.networking.vpc_id
-  app_subnet_ids        = module.networking.app_subnet_ids
+  app_subnet_ids        = module.networking.public_subnet_ids
   app_security_group_id = module.networking.app_security_group_id
   database_url          = var.cockroachdb_connection_string
   common_tags           = var.common_tags

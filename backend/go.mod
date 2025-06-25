@@ -5,6 +5,7 @@ go 1.23
 toolchain go1.24.4
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/alpacahq/alpaca-trade-api-go/v3 v3.8.1
 	github.com/aws/aws-lambda-go v1.46.0
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.0

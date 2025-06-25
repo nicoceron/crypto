@@ -43,14 +43,14 @@ func (r *PostgresRepository) CreateStockRating(ctx context.Context, rating *doma
 }
 
 // CreateStockRatingsBatch stores multiple stock ratings in a single transaction
-func (r *PostgresRepository) CreateStockRatingsBatch(ctx context.Context, ratings []domain.StockRating) error {
+func (r *PostgresRepository) CreateStockRatingsBatch(ctx context.Context, ratings []*domain.StockRating) (int, error) {
 	if len(ratings) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to begin transaction")
+		return 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to begin transaction")
 	}
 	defer tx.Rollback()
 
@@ -61,7 +61,7 @@ func (r *PostgresRepository) CreateStockRatingsBatch(ctx context.Context, rating
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (ticker, brokerage, rating_to, time) DO NOTHING`)
 	if err != nil {
-		return apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to prepare statement")
+		return 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to prepare statement")
 	}
 	defer stmt.Close()
 
@@ -72,9 +72,9 @@ func (r *PostgresRepository) CreateStockRatingsBatch(ctx context.Context, rating
 			rating.Action, rating.RatingFrom, rating.RatingTo, rating.TargetFrom,
 			rating.TargetTo, rating.Time)
 		if err != nil {
-			return apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to insert rating")
+			return 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to insert rating")
 		}
-		
+
 		// Check if a row was actually inserted
 		if rowsAffected, err := result.RowsAffected(); err == nil && rowsAffected > 0 {
 			insertedCount++
@@ -82,17 +82,30 @@ func (r *PostgresRepository) CreateStockRatingsBatch(ctx context.Context, rating
 	}
 
 	if err := tx.Commit(); err != nil {
-		return apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to commit transaction")
+		return 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to commit transaction")
 	}
 
-	fmt.Printf("📊 Database batch insert: %d attempted → %d inserted (skipped %d duplicates)\n", 
+	fmt.Printf("📊 Database batch insert: %d attempted → %d inserted (skipped %d duplicates)\n",
 		len(ratings), insertedCount, len(ratings)-insertedCount)
 
-	return nil
+	return insertedCount, nil
 }
 
 // GetStockRatings retrieves paginated stock ratings with optional filtering
-func (r *PostgresRepository) GetStockRatings(ctx context.Context, page, limit int, sortBy, order, search string) ([]domain.StockRating, int, error) {
+func (r *PostgresRepository) GetStockRatings(ctx context.Context, filters domain.FilterOptions) (*domain.PaginatedResponse[domain.StockRating], error) {
+	page := filters.Page
+	if page < 1 {
+		page = 1
+	}
+	limit := filters.Limit
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	sortBy := filters.SortBy
+	if sortBy == "" {
+		sortBy = "time"
+	}
+	search := filters.Search
 	offset := (page - 1) * limit
 
 	// Build WHERE clause for search
@@ -118,8 +131,9 @@ func (r *PostgresRepository) GetStockRatings(ctx context.Context, page, limit in
 		sortBy = "time"
 	}
 
-	if order != "asc" && order != "desc" {
-		order = "desc"
+	order := "desc"
+	if !filters.SortDesc {
+		order = "asc"
 	}
 
 	orderClause := fmt.Sprintf("ORDER BY %s %s", sortBy, strings.ToUpper(order))
@@ -129,7 +143,7 @@ func (r *PostgresRepository) GetStockRatings(ctx context.Context, page, limit in
 	var totalCount int
 	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount)
 	if err != nil {
-		return nil, 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to get total count")
+		return nil, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to get total count")
 	}
 
 	// Get paginated results
@@ -143,7 +157,7 @@ func (r *PostgresRepository) GetStockRatings(ctx context.Context, page, limit in
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to query stock ratings")
+		return nil, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to query stock ratings")
 	}
 	defer rows.Close()
 
@@ -155,16 +169,29 @@ func (r *PostgresRepository) GetStockRatings(ctx context.Context, page, limit in
 			&rating.Action, &rating.RatingFrom, &rating.RatingTo, &rating.TargetFrom,
 			&rating.TargetTo, &rating.Time, &rating.CreatedAt)
 		if err != nil {
-			return nil, 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to scan rating")
+			return nil, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to scan rating")
 		}
 		ratings = append(ratings, rating)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "error iterating over ratings")
+		return nil, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "error iterating over ratings")
 	}
 
-	return ratings, totalCount, nil
+	// Calculate pagination metadata
+	totalPages := (totalCount + limit - 1) / limit
+
+	response := &domain.PaginatedResponse[domain.StockRating]{
+		Data: ratings,
+		Pagination: domain.Pagination{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: totalCount,
+			TotalPages: totalPages,
+		},
+	}
+
+	return response, nil
 }
 
 // GetStockRatingsByTicker retrieves all ratings for a specific ticker
@@ -319,4 +346,4 @@ func (r *PostgresRepository) GetLatestRatingsByTicker(ctx context.Context) (map[
 	}
 
 	return result, nil
-} 
+}

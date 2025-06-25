@@ -56,8 +56,8 @@ func handleError(c *gin.Context, err error) {
 	// For unknown errors, log the full error and return detailed message for debugging
 	println("🔴 Unknown Error:", err.Error())
 	c.JSON(http.StatusInternalServerError, ErrorResponse{
-		Error: err.Error(), // Return the actual error message for debugging
-		Code:  apperrors.ErrCodeInternal,
+		Error:   err.Error(), // Return the actual error message for debugging
+		Code:    apperrors.ErrCodeInternal,
 		Details: "Raw error returned for debugging purposes",
 	})
 }
@@ -72,7 +72,7 @@ func CORS() gin.HandlerFunc {
 		c.Header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
 		c.Header("Access-Control-Allow-Credentials", "false")
 		c.Header("Access-Control-Max-Age", "86400")
-		
+
 		// Add cache control headers to prevent browser caching issues
 		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 		c.Header("Pragma", "no-cache")
@@ -86,4 +86,4 @@ func CORS() gin.HandlerFunc {
 
 		c.Next()
 	}
-} 
+}

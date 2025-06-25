@@ -9,19 +9,19 @@ import (
 type Config struct {
 	// Server configuration
 	Port string
-	
+
 	// Database configuration
 	DatabaseURL string
-	
+
 	// External API configuration
-	StockAPIURL    string
-	StockAPIToken  string
+	StockAPIURL     string
+	StockAPIToken   string
 	AlphaVantageKey string
-	
+
 	// Alpaca API configuration
 	AlpacaAPIKey    string
 	AlpacaAPISecret string
-	
+
 	// Application configuration
 	Environment string
 	LogLevel    string
@@ -58,4 +58,4 @@ func getEnvInt(key string, fallback int) int {
 		}
 	}
 	return fallback
-} 
+}

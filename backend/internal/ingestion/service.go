@@ -58,13 +58,20 @@ func (s *Service) IngestAllData(ctx context.Context) error {
 			return fmt.Errorf("failed to transform API ratings: %w", err)
 		}
 
+		// Convert to pointers for the repository call
+		ratingPointers := make([]*domain.StockRating, len(ratings))
+		for i := range ratings {
+			ratingPointers[i] = &ratings[i]
+		}
+
 		// Store ratings in batches
-		if err := s.stockRepo.CreateStockRatingsBatch(ctx, ratings); err != nil {
+		insertedCount, err := s.stockRepo.CreateStockRatingsBatch(ctx, ratingPointers)
+		if err != nil {
 			return fmt.Errorf("failed to store ratings batch: %w", err)
 		}
 
-		totalIngested += len(ratings)
-		fmt.Printf("Ingested batch of %d ratings (total: %d)\n", len(ratings), totalIngested)
+		totalIngested += insertedCount
+		fmt.Printf("Ingested batch of %d ratings (total: %d)\n", insertedCount, totalIngested)
 
 		// Check if there's more data
 		if apiResponse.NextPage == nil || *apiResponse.NextPage == "" {
@@ -105,7 +112,7 @@ func (s *Service) fetchDataFromAPI(ctx context.Context, nextPage *string) (*doma
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, apperrors.New(apperrors.ErrCodeUpstreamAPI, 
+		return nil, apperrors.New(apperrors.ErrCodeUpstreamAPI,
 			fmt.Sprintf("API request failed with status %d: %s", resp.StatusCode, string(body)))
 	}
 
@@ -158,7 +165,7 @@ func (s *Service) makeRequestWithRetry(ctx context.Context, req *http.Request, m
 // transformAPIRatings converts API response items to domain models
 func (s *Service) transformAPIRatings(apiRatings []domain.APIStockRating) ([]domain.StockRating, error) {
 	ratings := make([]domain.StockRating, 0, len(apiRatings))
-	
+
 	// Use a map to track unique ratings and prevent duplicates
 	uniqueRatings := make(map[string]domain.StockRating)
 
@@ -166,7 +173,7 @@ func (s *Service) transformAPIRatings(apiRatings []domain.APIStockRating) ([]dom
 		// Parse time
 		parsedTime, err := time.Parse(time.RFC3339, apiRating.Time)
 		if err != nil {
-			return nil, apperrors.Wrap(err, apperrors.ErrCodeValidation, 
+			return nil, apperrors.Wrap(err, apperrors.ErrCodeValidation,
 				fmt.Sprintf("failed to parse time for ticker %s", apiRating.Ticker))
 		}
 
@@ -204,10 +211,10 @@ func (s *Service) transformAPIRatings(apiRatings []domain.APIStockRating) ([]dom
 		}
 
 		// Create unique key to prevent duplicates
-		uniqueKey := fmt.Sprintf("%s-%s-%s-%s-%s", 
-			rating.Ticker, 
-			rating.Brokerage, 
-			rating.RatingTo, 
+		uniqueKey := fmt.Sprintf("%s-%s-%s-%s-%s",
+			rating.Ticker,
+			rating.Brokerage,
+			rating.RatingTo,
 			rating.Time.Format(time.RFC3339),
 			rating.Action)
 
@@ -215,7 +222,7 @@ func (s *Service) transformAPIRatings(apiRatings []domain.APIStockRating) ([]dom
 		if _, exists := uniqueRatings[uniqueKey]; !exists {
 			uniqueRatings[uniqueKey] = rating
 		} else {
-			fmt.Printf("🔄 Skipping duplicate rating: %s - %s - %s\n", 
+			fmt.Printf("🔄 Skipping duplicate rating: %s - %s - %s\n",
 				rating.Ticker, rating.Brokerage, rating.RatingTo)
 		}
 	}
@@ -225,7 +232,7 @@ func (s *Service) transformAPIRatings(apiRatings []domain.APIStockRating) ([]dom
 		ratings = append(ratings, rating)
 	}
 
-	fmt.Printf("📊 Filtered ratings: %d → %d (removed %d duplicates)\n", 
+	fmt.Printf("📊 Filtered ratings: %d → %d (removed %d duplicates)\n",
 		len(apiRatings), len(ratings), len(apiRatings)-len(ratings))
 
 	return ratings, nil
@@ -238,7 +245,7 @@ func (s *Service) parsePrice(priceStr string) (float64, error) {
 	cleaned = strings.TrimPrefix(cleaned, "$")
 	cleaned = strings.TrimPrefix(cleaned, "€")
 	cleaned = strings.TrimPrefix(cleaned, "£")
-	
+
 	// Parse as float
 	return strconv.ParseFloat(cleaned, 64)
 }
@@ -248,4 +255,4 @@ func (s *Service) EnrichStockData(ctx context.Context, tickers []string) error {
 	// TODO: Implement real data enrichment from external APIs
 	fmt.Printf("Enriching data for %d tickers (not yet implemented)\n", len(tickers))
 	return nil
-} 
+}

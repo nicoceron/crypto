@@ -4,11 +4,6 @@
     <div class="bg-white p-4">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">Stock Markets</h1>
-        <p class="text-sm text-gray-600 mt-1">
-          The global stock market ratings today.
-          <span class="text-red-600">📉 -1.2%</span> change in the last 24 hours.
-          <button class="text-blue-600 hover:underline ml-1">Read more</button>
-        </p>
       </div>
     </div>
 
@@ -19,6 +14,9 @@
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-lg font-semibold text-gray-900 flex items-center">
             🔥 Trending Recommendations
+            <span v-if="stocksStore.isLoading" class="ml-2 text-xs text-blue-600"
+              >⚡ Loading priority...</span
+            >
           </h3>
           <router-link to="/recommendations" class="text-blue-600 hover:underline text-sm">
             View more →
@@ -650,10 +648,14 @@ const getSortIconColor = (column: string, direction: 'asc' | 'desc') => {
 onMounted(async () => {
   console.log('🔄 MarketsView mounted, loading data...')
 
-  // Always fetch data for MarketsView - the store will handle duplicate prevention
-  // This ensures we have fresh data when the user navigates to this view
   try {
-    await Promise.all([stocksStore.fetchRatings(), stocksStore.fetchRecommendations()])
+    // PRIORITY LOADING: Load trending recommendations first!
+    console.log('🔥 Loading trending recommendations with priority...')
+    await stocksStore.priorityLoadTrendingData()
+
+    // Then load the rest of the data
+    console.log('📊 Loading remaining data...')
+    await stocksStore.fetchRatings()
   } catch (error) {
     console.error('Failed to load data:', error)
   }

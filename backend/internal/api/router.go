@@ -1,14 +1,13 @@
 package api
 
 import (
-	"stock-analyzer/internal/alpaca"
 	"stock-analyzer/internal/domain"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupRouter creates and configures the HTTP router
-func SetupRouter(stockRepo domain.StockRepository, ingestionSvc domain.IngestionService, recommendationSvc domain.RecommendationService, alpacaSvc *alpaca.Service) *gin.Engine {
+func SetupRouter(stockRepo domain.StockRepository, ingestionSvc domain.IngestionService, recommendationSvc domain.RecommendationService, alpacaSvc domain.AlpacaService) *gin.Engine {
 	// Create Gin router
 	router := gin.New()
 
@@ -42,4 +41,4 @@ func SetupRouter(stockRepo domain.StockRepository, ingestionSvc domain.Ingestion
 	}
 
 	return router
-} 
+}

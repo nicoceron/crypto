@@ -72,7 +72,7 @@
           </div>
 
           <!-- Details grid -->
-          <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="grid grid-cols-1 gap-6 mb-4">
             <div class="bg-gray-50 rounded-lg p-3">
               <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Latest Rating
@@ -84,62 +84,10 @@
 
             <div class="bg-gray-50 rounded-lg p-3">
               <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Technical Signal
-              </div>
-              <div class="mt-1 text-sm font-medium text-gray-900">
-                {{ recommendation.technical_signal || 'N/A' }}
-              </div>
-            </div>
-
-            <div class="bg-gray-50 rounded-lg p-3">
-              <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">
                 Price Target
               </div>
               <div class="mt-1 text-sm font-medium text-gray-900">
                 ${{ (recommendation.target_price || 0).toFixed(2) }}
-              </div>
-            </div>
-
-            <div class="bg-gray-50 rounded-lg p-3">
-              <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">Sentiment</div>
-              <div class="mt-1 text-sm font-medium text-gray-900">
-                {{ recommendation.sentiment_score || 'N/A' }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Additional details -->
-          <div
-            v-if="recommendation.technical_signal || recommendation.sentiment_score"
-            class="space-y-2"
-          >
-            <div
-              v-if="
-                recommendation.technical_signal &&
-                recommendation.technical_signal !== 'Pending Analysis'
-              "
-              class="flex items-start space-x-2"
-            >
-              <ChartBarIcon class="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Technical Signal
-                </div>
-                <div class="text-sm text-gray-600">
-                  {{ recommendation.technical_signal }}
-                </div>
-              </div>
-            </div>
-
-            <div v-if="recommendation.sentiment_score" class="flex items-start space-x-2">
-              <HeartIcon class="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Sentiment Score
-                </div>
-                <div class="text-sm text-gray-600">
-                  {{ recommendation.sentiment_score }}
-                </div>
               </div>
             </div>
           </div>
@@ -157,55 +105,13 @@
         </div>
       </div>
     </div>
-
-    <!-- Summary stats -->
-    <div v-if="stocksStore.recommendations.length > 0" class="bg-white shadow rounded-lg p-6">
-      <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recommendation Summary</h3>
-
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="text-center">
-          <div class="text-2xl font-bold text-blue-600">
-            {{ stocksStore.recommendations.length }}
-          </div>
-          <div class="text-sm text-gray-500">Total Recommendations</div>
-        </div>
-
-        <div class="text-center">
-          <div class="text-2xl font-bold text-green-600">
-            {{ averageScore.toFixed(1) }}
-          </div>
-          <div class="text-sm text-gray-500">Average Score</div>
-        </div>
-
-        <div class="text-center">
-          <div class="text-2xl font-bold text-purple-600">
-            {{ topScore.toFixed(1) }}
-          </div>
-          <div class="text-sm text-gray-500">Highest Score</div>
-        </div>
-
-        <div class="text-center">
-          <div class="text-2xl font-bold text-orange-600">
-            {{ uniqueRatings }}
-          </div>
-          <div class="text-sm text-gray-500">Rating Types</div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  StarIcon,
-  ArrowPathIcon,
-  TrophyIcon,
-  ChartBarIcon,
-  HeartIcon,
-  ClockIcon,
-} from '@heroicons/vue/24/outline'
+import { StarIcon, ArrowPathIcon, TrophyIcon, ClockIcon } from '@heroicons/vue/24/outline'
 import { useStocksStore } from '@/stores/stocks'
 import StockLogo from '@/components/StockLogo.vue'
 
@@ -216,22 +122,6 @@ const router = useRouter()
 // Computed
 const sortedRecommendations = computed(() => {
   return [...stocksStore.recommendations].sort((a, b) => (b.score || 0) - (a.score || 0))
-})
-
-const averageScore = computed(() => {
-  if (stocksStore.recommendations.length === 0) return 0
-  const sum = stocksStore.recommendations.reduce((acc, rec) => acc + (rec.score || 0), 0)
-  return sum / stocksStore.recommendations.length
-})
-
-const topScore = computed(() => {
-  if (stocksStore.recommendations.length === 0) return 0
-  return Math.max(...stocksStore.recommendations.map((r) => r.score || 0))
-})
-
-const uniqueRatings = computed(() => {
-  const ratings = new Set(stocksStore.recommendations.map((r) => r.latest_rating || 'Unknown'))
-  return ratings.size
 })
 
 // Methods

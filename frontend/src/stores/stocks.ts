@@ -155,12 +155,39 @@ export const useStocksStore = defineStore('stocks', () => {
     return rateLimitState.value.pendingPriceRequests.has(symbol)
   }
 
+  // Priority loading - Load trending recommendations first
+  async function priorityLoadTrendingData() {
+    console.log('🔥 Priority loading trending recommendations...')
+
+    // First, get recommendations quickly
+    await fetchRecommendations()
+
+    // Get top 2 trending symbols
+    const trendingSymbols = topRecommendations.value.slice(0, 2).map((r) => r.ticker)
+
+    if (trendingSymbols.length > 0) {
+      console.log('⚡ Loading priority data for trending stocks:', trendingSymbols)
+
+      // Load logos and price data for trending stocks with highest priority
+      await Promise.all([
+        batchLoadLogoData(trendingSymbols, true), // true = priority
+        batchLoadPriceData(trendingSymbols, true), // true = priority
+      ])
+    }
+  }
+
   // Rate-limited batch loading functions
-  async function batchLoadLogoData(symbols: string[]) {
-    if (rateLimitState.value.logoBatchInProgress) {
+  async function batchLoadLogoData(symbols: string[], isPriority: boolean = false) {
+    if (rateLimitState.value.logoBatchInProgress && !isPriority) {
       // Add new symbols to the queue if a batch is already running
       const newSymbols = symbols.filter((s) => !rateLimitState.value.pendingLogoRequests.has(s))
       newSymbols.forEach((s) => rateLimitState.value.pendingLogoRequests.add(s))
+      return
+    }
+
+    if (isPriority) {
+      // For priority loading, process immediately
+      await processPriorityLogoBatch(symbols)
       return
     }
 
@@ -218,10 +245,55 @@ export const useStocksStore = defineStore('stocks', () => {
     await processQueue()
   }
 
-  async function batchLoadPriceData(symbols: string[]) {
-    if (rateLimitState.value.priceBatchInProgress) {
+  // Priority processing functions
+  async function processPriorityLogoBatch(symbols: string[]) {
+    console.log('🔥 Priority loading logos:', symbols)
+    const promises = symbols.map(async (symbol) => {
+      try {
+        const cached = getCachedLogoData(symbol)
+        if (cached) return // Already cached
+
+        const logoData = await apiService.getStockLogo(symbol)
+        if (logoData?.logo_url) {
+          setCachedLogoData(symbol, logoData.logo_url)
+        } else {
+          setCachedLogoData(symbol, `https://logo.clearbit.com/${symbol.toLowerCase()}.com`)
+        }
+      } catch (error) {
+        console.warn('Priority logo loading failed for', symbol, error)
+        setCachedLogoData(symbol, `https://logo.clearbit.com/${symbol.toLowerCase()}.com`)
+      }
+    })
+
+    await Promise.all(promises)
+  }
+
+  async function processPriorityPriceBatch(symbols: string[]) {
+    console.log('🔥 Priority loading price data:', symbols)
+    const promises = symbols.map(async (symbol) => {
+      try {
+        const priceData = await apiService.getStockPrice(symbol, '1W')
+        if (priceData?.bars) {
+          setPriceData(symbol, priceData.bars)
+        }
+      } catch (error) {
+        console.warn('Priority price loading failed for', symbol, error)
+      }
+    })
+
+    await Promise.all(promises)
+  }
+
+  async function batchLoadPriceData(symbols: string[], isPriority: boolean = false) {
+    if (rateLimitState.value.priceBatchInProgress && !isPriority) {
       const newSymbols = symbols.filter((s) => !rateLimitState.value.pendingPriceRequests.has(s))
       newSymbols.forEach((s) => rateLimitState.value.pendingPriceRequests.add(s))
+      return
+    }
+
+    if (isPriority) {
+      // For priority loading, process immediately
+      await processPriorityPriceBatch(symbols)
       return
     }
 
@@ -666,5 +738,8 @@ export const useStocksStore = defineStore('stocks', () => {
     // Batch loading functions
     batchLoadLogoData,
     batchLoadPriceData,
+
+    // Priority loading
+    priorityLoadTrendingData,
   }
 })

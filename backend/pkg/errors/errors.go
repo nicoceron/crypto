@@ -61,17 +61,17 @@ var (
 		Code:    ErrCodeNotFound,
 		Message: "Resource not found",
 	}
-	
+
 	ErrValidationFailure = &AppError{
 		Code:    ErrCodeValidation,
 		Message: "Validation failed",
 	}
-	
+
 	ErrUpstreamAPIFailure = &AppError{
 		Code:    ErrCodeUpstreamAPI,
 		Message: "External API request failed",
 	}
-	
+
 	ErrDatabaseFailure = &AppError{
 		Code:    ErrCodeDatabase,
 		Message: "Database operation failed",
@@ -103,4 +103,4 @@ func (e *AppError) WithDetails(details string) *AppError {
 		Details: details,
 		Cause:   e.Cause,
 	}
-} 
+}

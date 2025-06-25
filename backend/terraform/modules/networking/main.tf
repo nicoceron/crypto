@@ -66,32 +66,34 @@ resource "aws_subnet" "database" {
   })
 }
 
-# Elastic IPs for NAT gateways
-resource "aws_eip" "nat" {
-  count = length(var.availability_zones)
-  
-  domain = "vpc"
-  
-  tags = merge(var.common_tags, {
-    Name = "${var.project_name}-${var.environment}-nat-eip-${count.index + 1}"
-  })
-  
-  depends_on = [aws_internet_gateway.main]
-}
+# Elastic IPs for NAT gateways - COMMENTED OUT TO SAVE COSTS
+# Lambdas now use public subnets directly
+# resource "aws_eip" "nat" {
+#   count = length(var.availability_zones)
+#   
+#   domain = "vpc"
+#   
+#   tags = merge(var.common_tags, {
+#     Name = "${var.project_name}-${var.environment}-nat-eip-${count.index + 1}"
+#   })
+#   
+#   depends_on = [aws_internet_gateway.main]
+# }
 
-# NAT gateways
-resource "aws_nat_gateway" "main" {
-  count = length(var.availability_zones)
-  
-  allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
-  
-  tags = merge(var.common_tags, {
-    Name = "${var.project_name}-${var.environment}-nat-${count.index + 1}"
-  })
-  
-  depends_on = [aws_internet_gateway.main]
-}
+# NAT gateways - COMMENTED OUT TO SAVE COSTS
+# Lambdas now use public subnets directly
+# resource "aws_nat_gateway" "main" {
+#   count = length(var.availability_zones)
+#   
+#   allocation_id = aws_eip.nat[count.index].id
+#   subnet_id     = aws_subnet.public[count.index].id
+#   
+#   tags = merge(var.common_tags, {
+#     Name = "${var.project_name}-${var.environment}-nat-${count.index + 1}"
+#   })
+#   
+#   depends_on = [aws_internet_gateway.main]
+# }
 
 # Route table for public subnets
 resource "aws_route_table" "public" {
@@ -115,16 +117,18 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Route tables for private subnets (application layer)
+# Route tables for private subnets (application layer) - UPDATED FOR COST SAVINGS
+# Lambdas now use public subnets, but keeping these for other services if needed
 resource "aws_route_table" "app" {
   count = length(var.availability_zones)
   
   vpc_id = aws_vpc.main.id
   
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[count.index].id
-  }
+  # No internet route needed since Lambdas moved to public subnets
+  # route {
+  #   cidr_block     = "0.0.0.0/0"
+  #   nat_gateway_id = aws_nat_gateway.main[count.index].id
+  # }
   
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-${var.environment}-app-rt-${count.index + 1}"

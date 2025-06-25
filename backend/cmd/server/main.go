@@ -13,6 +13,7 @@ import (
 
 	"stock-analyzer/internal/alpaca"
 	"stock-analyzer/internal/api"
+	"stock-analyzer/internal/domain"
 	"stock-analyzer/internal/ingestion"
 	"stock-analyzer/internal/recommendation"
 	"stock-analyzer/internal/storage"
@@ -44,7 +45,7 @@ func main() {
 	recommendationSvc := recommendation.NewService(stockRepo)
 
 	// Initialize Alpaca service
-	alpacaSvc := alpaca.NewService(cfg.AlpacaAPIKey, cfg.AlpacaAPISecret)
+	alpacaSvc := alpaca.NewAdapter(cfg.AlpacaAPIKey, cfg.AlpacaAPISecret)
 	log.Printf("Initialized Alpaca service with API key: %s****", cfg.AlpacaAPIKey[:4])
 
 	// Setup HTTP router with all services
@@ -78,7 +79,7 @@ func main() {
 				log.Printf("Initial ingestion failed: %v", err)
 			} else {
 				log.Println("Initial data ingestion completed successfully")
-				
+
 				// Enrich data for a few popular tickers
 				tickers, _ := stockRepo.GetUniqueTickers(ctx)
 				if len(tickers) > 0 {
@@ -151,12 +152,20 @@ func shouldRunInitialIngestion(stockRepo *storage.PostgresRepository) bool {
 	defer cancel()
 
 	// Check if we have any data in the database
-	ratings, _, err := stockRepo.GetStockRatings(ctx, 1, 1, "time", "desc", "")
+	filters := domain.FilterOptions{
+		Page:     1,
+		Limit:    1,
+		SortBy:   "time",
+		SortDesc: true,
+		Search:   "",
+	}
+	
+	response, err := stockRepo.GetStockRatings(ctx, filters)
 	if err != nil {
 		log.Printf("Error checking for existing data: %v", err)
 		return false
 	}
 
 	// If no data exists, run initial ingestion
-	return len(ratings) == 0
-} 
+	return len(response.Data) == 0
+}

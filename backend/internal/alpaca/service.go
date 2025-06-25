@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"stock-analyzer/internal/domain"
+
 	"github.com/alpacahq/alpaca-trade-api-go/v3/marketdata"
 )
 
@@ -61,7 +63,7 @@ func NewRateLimiter(delay time.Duration) *RateLimiter {
 func (rl *RateLimiter) Wait() {
 	rl.mutex.Lock()
 	defer rl.mutex.Unlock()
-	
+
 	elapsed := time.Since(rl.lastCall)
 	if elapsed < rl.delay {
 		waitTime := rl.delay - elapsed
@@ -89,6 +91,19 @@ func NewService(apiKey, apiSecret string) *Service {
 	return &Service{
 		client:      alpacaClient,
 		rateLimiter: NewRateLimiter(250 * time.Millisecond), // 4 requests per second max
+	}
+}
+
+// newTestService creates a new service instance for testing purposes, allowing
+// the API base URL to be overridden to point to a mock server.
+func newTestService(baseURL string) *Service {
+	client := marketdata.NewClient(marketdata.ClientOpts{
+		BaseURL: baseURL,
+	})
+
+	return &Service{
+		client:      client,
+		rateLimiter: NewRateLimiter(1 * time.Millisecond), // Use a very short delay for tests
 	}
 }
 
@@ -120,8 +135,8 @@ func (s *Service) parseTimeFrame(timeframe string) marketdata.TimeFrame {
 func (s *Service) GetHistoricalBars(ctx context.Context, symbol string, timeframe string, start, end time.Time) ([]PriceBar, error) {
 	// Apply rate limiting
 	s.rateLimiter.Wait()
-	
-	fmt.Printf("🔸 ALPACA SERVICE: GetHistoricalBars called for %s (%s) from %s to %s (%.1f hours) - WITH RATE LIMITING\n", 
+
+	fmt.Printf("🔸 ALPACA SERVICE: GetHistoricalBars called for %s (%s) from %s to %s (%.1f hours) - WITH RATE LIMITING\n",
 		symbol, timeframe, start.Format("2006-01-02 15:04"), end.Format("2006-01-02 15:04"), end.Sub(start).Hours())
 	return s.getAlpacaBars(ctx, symbol, timeframe, start, end)
 }
@@ -130,7 +145,7 @@ func (s *Service) GetHistoricalBars(ctx context.Context, symbol string, timefram
 func (s *Service) getAlpacaBars(ctx context.Context, symbol string, timeframe string, start, end time.Time) ([]PriceBar, error) {
 	// Parse the timeframe
 	tf := s.parseTimeFrame(timeframe)
-	
+
 	// Create bars request using official SDK with dynamic timeframe
 	req := marketdata.GetBarsRequest{
 		TimeFrame: tf,
@@ -139,7 +154,7 @@ func (s *Service) getAlpacaBars(ctx context.Context, symbol string, timeframe st
 		Feed:      marketdata.IEX, // Use IEX feed for better reliability
 	}
 
-	fmt.Printf("🔸 ALPACA API: Making %s request for %s from %s to %s (%.1f hours)\n", 
+	fmt.Printf("🔸 ALPACA API: Making %s request for %s from %s to %s (%.1f hours)\n",
 		timeframe, symbol, start.Format("2006-01-02 15:04"), end.Format("2006-01-02 15:04"), end.Sub(start).Hours())
 
 	// Get bars using official SDK (single symbol)
@@ -150,7 +165,7 @@ func (s *Service) getAlpacaBars(ctx context.Context, symbol string, timeframe st
 	}
 
 	if len(bars) == 0 {
-		fmt.Printf("No %s bars returned from Alpaca for %s between %s and %s\n", 
+		fmt.Printf("No %s bars returned from Alpaca for %s between %s and %s\n",
 			timeframe, symbol, start.Format("2006-01-02 15:04"), end.Format("2006-01-02 15:04"))
 		return []PriceBar{}, fmt.Errorf("no bars found for symbol %s in date range", symbol)
 	}
@@ -168,7 +183,7 @@ func (s *Service) getAlpacaBars(ctx context.Context, symbol string, timeframe st
 		}
 	}
 
-	fmt.Printf("✅ Alpaca SUCCESS: returned %d %s bars for %s (requested %s to %s, %.1f hours)\n", 
+	fmt.Printf("✅ Alpaca SUCCESS: returned %d %s bars for %s (requested %s to %s, %.1f hours)\n",
 		len(priceBars), timeframe, symbol, start.Format("2006-01-02 15:04"), end.Format("2006-01-02 15:04"), end.Sub(start).Hours())
 	return priceBars, nil
 }
@@ -177,7 +192,7 @@ func (s *Service) getAlpacaBars(ctx context.Context, symbol string, timeframe st
 func (s *Service) GetSnapshot(ctx context.Context, symbol string) (*Snapshot, error) {
 	// Apply rate limiting
 	s.rateLimiter.Wait()
-	
+
 	fmt.Printf("🔸 ALPACA SERVICE: GetSnapshot called for %s\n", symbol)
 
 	req := marketdata.GetSnapshotRequest{
@@ -269,6 +284,136 @@ func (s *Service) IsMarketHours() bool {
 	// This is a simplified version; production code might use more sophisticated timezone handling
 	hour := now.Hour()
 	weekday := now.Weekday()
-	
+
 	return weekday >= time.Monday && weekday <= time.Friday && hour >= 9 && hour < 16
-} 
+}
+
+// Adapter implements domain.AlpacaService interface
+type Adapter struct {
+	service *Service
+}
+
+// NewAdapter creates a new adapter that implements domain.AlpacaService
+func NewAdapter(apiKey, apiSecret string) *Adapter {
+	return &Adapter{
+		service: NewService(apiKey, apiSecret),
+	}
+}
+
+// GetHistoricalBars implements domain.AlpacaService
+func (a *Adapter) GetHistoricalBars(ctx context.Context, symbol string, timeframe string, start, end time.Time) ([]domain.PriceBar, error) {
+	bars, err := a.service.GetHistoricalBars(ctx, symbol, timeframe, start, end)
+	if err != nil {
+		return nil, err
+	}
+	
+	domainBars := make([]domain.PriceBar, len(bars))
+	for i, bar := range bars {
+		domainBars[i] = domain.PriceBar{
+			Timestamp: bar.Timestamp,
+			Open:      bar.Open,
+			High:      bar.High,
+			Low:       bar.Low,
+			Close:     bar.Close,
+			Volume:    bar.Volume,
+		}
+	}
+	
+	return domainBars, nil
+}
+
+// GetSnapshot implements domain.AlpacaService
+func (a *Adapter) GetSnapshot(ctx context.Context, symbol string) (*domain.Snapshot, error) {
+	snapshot, err := a.service.GetSnapshot(ctx, symbol)
+	if err != nil {
+		return nil, err
+	}
+	
+	if snapshot == nil {
+		return nil, nil
+	}
+	
+	domainSnapshot := &domain.Snapshot{
+		Symbol: snapshot.Symbol,
+	}
+	
+	if snapshot.LatestTrade != nil {
+		domainSnapshot.LatestTrade = &domain.Trade{
+			Timestamp: snapshot.LatestTrade.Timestamp,
+			Price:     snapshot.LatestTrade.Price,
+			Size:      snapshot.LatestTrade.Size,
+		}
+	}
+	
+	if snapshot.LatestQuote != nil {
+		domainSnapshot.LatestQuote = &domain.Quote{
+			Timestamp: snapshot.LatestQuote.Timestamp,
+			BidPrice:  snapshot.LatestQuote.BidPrice,
+			AskPrice:  snapshot.LatestQuote.AskPrice,
+			BidSize:   snapshot.LatestQuote.BidSize,
+			AskSize:   snapshot.LatestQuote.AskSize,
+		}
+	}
+	
+	if snapshot.MinuteBar != nil {
+		domainSnapshot.MinuteBar = &domain.PriceBar{
+			Timestamp: snapshot.MinuteBar.Timestamp,
+			Open:      snapshot.MinuteBar.Open,
+			High:      snapshot.MinuteBar.High,
+			Low:       snapshot.MinuteBar.Low,
+			Close:     snapshot.MinuteBar.Close,
+			Volume:    snapshot.MinuteBar.Volume,
+		}
+	}
+	
+	if snapshot.DailyBar != nil {
+		domainSnapshot.DailyBar = &domain.PriceBar{
+			Timestamp: snapshot.DailyBar.Timestamp,
+			Open:      snapshot.DailyBar.Open,
+			High:      snapshot.DailyBar.High,
+			Low:       snapshot.DailyBar.Low,
+			Close:     snapshot.DailyBar.Close,
+			Volume:    snapshot.DailyBar.Volume,
+		}
+	}
+	
+	if snapshot.PrevDailyBar != nil {
+		domainSnapshot.PrevDailyBar = &domain.PriceBar{
+			Timestamp: snapshot.PrevDailyBar.Timestamp,
+			Open:      snapshot.PrevDailyBar.Open,
+			High:      snapshot.PrevDailyBar.High,
+			Low:       snapshot.PrevDailyBar.Low,
+			Close:     snapshot.PrevDailyBar.Close,
+			Volume:    snapshot.PrevDailyBar.Volume,
+		}
+	}
+	
+	return domainSnapshot, nil
+}
+
+// GetRecentBars implements domain.AlpacaService
+func (a *Adapter) GetRecentBars(ctx context.Context, symbol string) ([]domain.PriceBar, error) {
+	bars, err := a.service.GetRecentBars(ctx, symbol)
+	if err != nil {
+		return nil, err
+	}
+	
+	domainBars := make([]domain.PriceBar, len(bars))
+	for i, bar := range bars {
+		domainBars[i] = domain.PriceBar{
+			Timestamp: bar.Timestamp,
+			Open:      bar.Open,
+			High:      bar.High,
+			Low:       bar.Low,
+			Close:     bar.Close,
+			Volume:    bar.Volume,
+		}
+	}
+	
+	return domainBars, nil
+}
+
+// IsMarketHours implements domain.AlpacaService
+func (a *Adapter) IsMarketHours() bool {
+	return a.service.IsMarketHours()
+}

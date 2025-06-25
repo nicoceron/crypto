@@ -47,6 +47,7 @@ resource "aws_iam_role_policy" "lambda" {
           "ec2:DeleteNetworkInterface"
         ]
         Resource = "*"
+        # Still needed for VPC-based Lambdas even in public subnets
       },
       {
         Effect = "Allow"
@@ -146,9 +147,9 @@ resource "aws_lambda_function" "functions" {
   # Publish versions for API function to enable provisioned concurrency
   publish = each.key == "api" ? true : false
   
-  # Network configuration
+  # Network configuration - using public subnets to avoid NAT Gateway costs
   vpc_config {
-    subnet_ids         = var.app_subnet_ids
+    subnet_ids         = var.app_subnet_ids  # Now points to public subnets
     security_group_ids = [var.app_security_group_id]
   }
   

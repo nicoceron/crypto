@@ -2,33 +2,21 @@ package api
 
 import (
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"stock-analyzer/internal/alpaca"
 	"stock-analyzer/internal/domain"
 	apperrors "stock-analyzer/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 )
 
-// PriceBar represents a single price bar/candle
-type PriceBar struct {
-	Timestamp string  `json:"timestamp"`
-	Open      float64 `json:"open"`
-	High      float64 `json:"high"`
-	Low       float64 `json:"low"`
-	Close     float64 `json:"close"`
-	Volume    int64   `json:"volume"`
-}
-
 // StockPriceResponse represents the price data response
 type StockPriceResponse struct {
-	Symbol string     `json:"symbol"`
-	Bars   []PriceBar `json:"bars"`
+	Symbol string              `json:"symbol"`
+	Bars   []domain.PriceBar `json:"bars"`
 }
 
 // StockLogoResponse represents the logo response
@@ -39,19 +27,19 @@ type StockLogoResponse struct {
 
 // Handlers contains all the HTTP handlers
 type Handlers struct {
-	stockRepo       domain.StockRepository
-	ingestionSvc    domain.IngestionService
+	stockRepo         domain.StockRepository
+	ingestionSvc      domain.IngestionService
 	recommendationSvc domain.RecommendationService
-	alpacaSvc       *alpaca.Service
+	alpacaSvc         domain.AlpacaService
 }
 
 // NewHandlers creates a new handlers instance
-func NewHandlers(stockRepo domain.StockRepository, ingestionSvc domain.IngestionService, recommendationSvc domain.RecommendationService, alpacaSvc *alpaca.Service) *Handlers {
+func NewHandlers(stockRepo domain.StockRepository, ingestionSvc domain.IngestionService, recommendationSvc domain.RecommendationService, alpacaSvc domain.AlpacaService) *Handlers {
 	return &Handlers{
-		stockRepo:       stockRepo,
-		ingestionSvc:    ingestionSvc,
+		stockRepo:         stockRepo,
+		ingestionSvc:      ingestionSvc,
 		recommendationSvc: recommendationSvc,
-		alpacaSvc:       alpacaSvc,
+		alpacaSvc:         alpacaSvc,
 	}
 }
 
@@ -68,12 +56,12 @@ func (h *Handlers) GetStockPrice(c *gin.Context) {
 
 	// Parse period parameter with enhanced logic for mini charts
 	period := c.DefaultQuery("period", "1M")
-	
+
 	// For mini charts, we want more granular data
 	var timeframe string
 	var start time.Time
 	end := time.Now()
-	
+
 	switch period {
 	case "1W":
 		start = end.AddDate(0, 0, -7)
@@ -116,9 +104,9 @@ func (h *Handlers) GetStockPrice(c *gin.Context) {
 	}
 
 	// Convert Alpaca bars to our format
-	bars := make([]PriceBar, len(alpacaBars))
+	bars := make([]domain.PriceBar, len(alpacaBars))
 	for i, alpacaBar := range alpacaBars {
-		bars[i] = PriceBar{
+		bars[i] = domain.PriceBar{
 			Timestamp: alpacaBar.Timestamp,
 			Open:      alpacaBar.Open,
 			High:      alpacaBar.High,
@@ -135,9 +123,21 @@ func (h *Handlers) GetStockPrice(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("🔹 HANDLER: Returning %d bars for %s period %s (first: %s, last: %s)\n", len(bars), symbol, period, 
-		func() string { if len(bars) > 0 { return bars[0].Timestamp } else { return "N/A" } }(),
-		func() string { if len(bars) > 0 { return bars[len(bars)-1].Timestamp } else { return "N/A" } }())
+	fmt.Printf("🔹 HANDLER: Returning %d bars for %s period %s (first: %s, last: %s)\n", len(bars), symbol, period,
+		func() string {
+			if len(bars) > 0 {
+				return bars[0].Timestamp
+			} else {
+				return "N/A"
+			}
+		}(),
+		func() string {
+			if len(bars) > 0 {
+				return bars[len(bars)-1].Timestamp
+			} else {
+				return "N/A"
+			}
+		}())
 
 	response := StockPriceResponse{
 		Symbol: symbol,
@@ -171,7 +171,7 @@ func (h *Handlers) GetStockLogo(c *gin.Context) {
 	// Add caching headers for logo responses (cache for 1 hour)
 	c.Header("Cache-Control", "public, max-age=3600")
 	c.Header("ETag", fmt.Sprintf(`"%s"`, symbol))
-	
+
 	fmt.Printf("✅ HANDLER: Successfully returning logo URL for %s: %s\n", symbol, logoURL)
 	c.JSON(http.StatusOK, response)
 }
@@ -203,28 +203,24 @@ func (h *Handlers) GetStockRatings(c *gin.Context) {
 	order := c.DefaultQuery("order", "desc")
 	search := c.Query("search")
 
+	// Create filter options
+	filters := domain.FilterOptions{
+		Page:     page,
+		Limit:    limit,
+		Search:   search,
+		SortBy:   sortBy,
+		SortDesc: order == "desc",
+	}
+
 	// Get ratings from repository
 	fmt.Printf("🔍 HANDLER: Getting ratings - page:%d, limit:%d, sortBy:%s, order:%s, search:%s\n", page, limit, sortBy, order, search)
-	ratings, totalCount, err := h.stockRepo.GetStockRatings(c.Request.Context(), page, limit, sortBy, order, search)
+	response, err := h.stockRepo.GetStockRatings(c.Request.Context(), filters)
 	if err != nil {
 		fmt.Printf("🔴 ERROR in GetStockRatings: %v\n", err)
 		HandleError(c, err)
 		return
 	}
-	fmt.Printf("✅ HANDLER: Successfully retrieved %d ratings (total: %d)\n", len(ratings), totalCount)
-
-	// Calculate pagination metadata
-	totalPages := int(math.Ceil(float64(totalCount) / float64(limit)))
-
-	response := domain.PaginatedResponse[domain.StockRating]{
-		Data: ratings,
-		Pagination: domain.Pagination{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: totalCount,
-			TotalPages: totalPages,
-		},
-	}
+	fmt.Printf("✅ HANDLER: Successfully retrieved %d ratings (total: %d)\n", len(response.Data), response.Pagination.TotalItems)
 
 	c.JSON(http.StatusOK, response)
 }
@@ -304,4 +300,4 @@ func parseIntQuery(c *gin.Context, key string, defaultValue int) (int, error) {
 	}
 
 	return value, nil
-} 
+}

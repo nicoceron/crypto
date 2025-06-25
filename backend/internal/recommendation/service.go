@@ -23,8 +23,8 @@ type Service struct {
 type recommendationCache struct {
 	recommendations []domain.StockRecommendation
 	lastUpdated     time.Time
-	mutex          sync.RWMutex
-	ttl            time.Duration
+	mutex           sync.RWMutex
+	ttl             time.Duration
 }
 
 // NewService creates a new recommendation service
@@ -94,10 +94,10 @@ func (s *Service) filterPositiveRatings(latestRatings map[string]*domain.StockRa
 	for _, rating := range latestRatings {
 		// Check if action indicates positive movement
 		actionPositive := positiveActions[strings.ToLower(rating.Action)]
-		
+
 		// Check if rating is positive
 		ratingPositive := positiveRatings[rating.RatingTo]
-		
+
 		// Check if this was an upgrade (rating_from was worse than rating_to)
 		wasUpgraded := s.isUpgrade(rating.RatingFrom, &rating.RatingTo)
 
@@ -137,7 +137,7 @@ func (s *Service) isUpgrade(from *string, to *string) bool {
 // createBasicRecommendation creates a recommendation based only on analyst rating
 func (s *Service) createBasicRecommendation(rating *domain.StockRating) *domain.StockRecommendation {
 	baseScore := 0.7 // Base score for positive analyst rating
-	
+
 	// Adjust score based on rating strength
 	ratingBonus := map[string]float64{
 		"Strong Buy": 0.2,
@@ -156,7 +156,7 @@ func (s *Service) createBasicRecommendation(rating *domain.StockRating) *domain.
 		timeBonus = 0.05
 	}
 
-	finalScore := math.Min(1.0, baseScore + timeBonus)
+	finalScore := math.Min(1.0, baseScore+timeBonus)
 
 	return &domain.StockRecommendation{
 		Ticker:          rating.Ticker,
@@ -197,17 +197,17 @@ func (s *Service) generateBasicRationale(rating *domain.StockRating) string {
 // GetCachedRecommendations retrieves cached recommendations or generates new ones if cache is stale
 func (s *Service) GetCachedRecommendations(ctx context.Context) ([]domain.StockRecommendation, error) {
 	s.cache.mutex.RLock()
-	
+
 	// Check if cache is still valid
 	if time.Since(s.cache.lastUpdated) < s.cache.ttl && len(s.cache.recommendations) > 0 {
 		recommendations := make([]domain.StockRecommendation, len(s.cache.recommendations))
 		copy(recommendations, s.cache.recommendations)
 		s.cache.mutex.RUnlock()
-		
+
 		fmt.Printf("Returning cached recommendations (%d items)\n", len(recommendations))
 		return recommendations, nil
 	}
-	
+
 	s.cache.mutex.RUnlock()
 
 	// Cache is stale or empty, generate new recommendations
@@ -273,4 +273,4 @@ func (s *Service) analyzeSentiment(sentimentData map[string]interface{}) *float6
 	// Normalize sentiment score from [-1, 1] to [0, 1]
 	normalizedScore := (sentimentScore + 1) / 2
 	return &normalizedScore
-} 
+}

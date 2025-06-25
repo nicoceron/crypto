@@ -33,10 +33,11 @@ output "database_security_group_id" {
   value       = aws_security_group.database.id
 }
 
-output "nat_gateway_ids" {
-  description = "IDs of the NAT gateways"
-  value       = aws_nat_gateway.main[*].id
-}
+# NAT Gateway outputs commented out - no longer using NAT Gateways to save costs
+# output "nat_gateway_ids" {
+#   description = "IDs of the NAT gateways"
+#   value       = aws_nat_gateway.main[*].id
+# }
 
 output "internet_gateway_id" {
   description = "ID of the Internet Gateway"
