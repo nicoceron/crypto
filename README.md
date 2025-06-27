@@ -239,49 +239,6 @@ GIN_MODE=release        # Gin mode (debug/release)
 VITE_API_BASE_URL=      # Backend API URL
 ```
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow Go best practices and clean architecture principles
-- Use TypeScript for all frontend code
-- Write tests for new features
-- Update documentation for API changes
-- Follow conventional commit messages
-
-## 📋 Current Status
-
-### ✅ Implemented Features
-
-- Stock ratings database with full CRUD operations
-- Real-time price charts with multiple timeframes
-- Basic recommendation engine based on analyst ratings
-- Search and filtering for stock ratings
-- Responsive web interface
-- AWS Lambda deployment infrastructure
-- Database migrations and schema management
-
-### 🚧 Work in Progress
-
-- Enhanced recommendation algorithms
-- Real-time data streaming
-- Advanced technical indicators
-- Portfolio tracking capabilities
-
-### 🔮 Future Roadmap
-
-- Social sentiment integration
-- Mobile application
-- Options trading analysis
-- Paper trading simulation
-- Real-time alerts and notifications
-
 ## 📚 Tech Stack
 
 ### Backend
