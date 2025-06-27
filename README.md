@@ -1,49 +1,54 @@
 # Stock Analyzer
 
-A full-stack stock analysis and recommendation platform that provides real-time market data, analyst ratings, and AI-generated investment recommendations.
+A stock analysis platform that provides stock ratings data, price charts, and basic recommendations based on analyst consensus.
 
 <img width="1393" alt="image" src="https://github.com/user-attachments/assets/746b4032-9354-46be-b4d2-9d1eb7903417" />
 
+## 🚀 Current Features
 
-## 🚀 Features
+### 📊 Stock Data
 
-### 📊 Market Analysis
+- **Stock Ratings**: Database of analyst ratings from major brokerages with search and pagination
+- **Price Charts**: Interactive price charts with multiple timeframes (1W, 1M, 3M, 6M, 1Y, 2Y) via Alpaca API
+- **Company Logos**: Automatic logo fetching using Clearbit API
+- **Rating History**: Track analyst rating changes and price targets over time
 
-- **Real-time Stock Data**: Live price charts and historical data via Alpaca API
-- **Analyst Ratings**: Comprehensive database of stock ratings from major brokerages
-- **Price Targets**: Target price tracking and analysis
-- **Technical Indicators**: Advanced chart analysis with multiple timeframes
+### 🤖 Basic Recommendations
 
-### 🤖 AI Recommendations
-
-- **Smart Recommendations**: AI-powered investment suggestions based on multiple data sources
-- **Sentiment Analysis**: News sentiment scoring and market mood tracking
-- **Risk Assessment**: Comprehensive risk analysis and scoring
-- **Portfolio Insights**: Personalized investment recommendations
+- **Analyst-Based Recommendations**: Simple recommendation engine based on recent analyst ratings
+- **Rating Scoring**: Weighted scoring system based on rating quality and recency
+- **Trending Stocks**: Display of recently upgraded stocks and top recommendations
 
 ### 💻 Modern Interface
 
-- **Responsive Design**: Beautiful, mobile-first interface built with Vue 3 and Tailwind CSS
-- **Interactive Charts**: Dynamic price charts with Chart.js integration
-- **Real-time Updates**: Live data streaming and automatic refresh
-- **Advanced Filtering**: Powerful search and filtering capabilities
+- **Responsive Design**: Mobile-first interface built with Vue 3 and Tailwind CSS
+- **Interactive Charts**: Price charts with Chart.js integration
+- **Real-time Data**: Live price data from Alpaca Markets API
+- **Search & Filtering**: Search by ticker or company name with pagination
 
 ## 🏗️ Architecture
 
 ### Backend (Go)
 
 - **Framework**: Gin HTTP router with clean architecture
-- **Database**: PostgreSQL with CockroachDB Cloud support
-- **APIs**: Alpaca Markets integration for real-time data
-- **Services**: Modular service architecture with domain-driven design
+- **Database**: PostgreSQL/CockroachDB with migrations
+- **APIs**: Alpaca Markets for price data, external API for ratings
+- **Services**: Modular service architecture with ingestion, recommendation, and storage layers
+- **Deployment**: AWS Lambda with API Gateway (fully configured)
 
 ### Frontend (Vue.js)
 
 - **Framework**: Vue 3 with TypeScript and Composition API
 - **Styling**: Tailwind CSS with Headless UI components
 - **State Management**: Pinia for reactive state management
-- **Routing**: Vue Router with lazy loading
-- **Testing**: Vitest + Cypress for unit and E2E testing
+- **Routing**: Vue Router with views for Markets, Recommendations, and Stock Details
+- **Charts**: Chart.js with vue-chartjs for price visualization
+
+### Database Schema
+
+- **stock_ratings**: Core table with analyst ratings, price targets, and metadata
+- **enriched_stock_data**: Additional data storage for future enhancements
+- **Indexes**: Optimized for search and filtering performance
 
 ## 🛠️ Development Setup
 
@@ -51,7 +56,7 @@ A full-stack stock analysis and recommendation platform that provides real-time 
 
 - **Go 1.23+**
 - **Node.js 18+**
-- **CockroachDB**
+- **PostgreSQL** or **CockroachDB**
 - **Alpaca Markets API Key**
 
 ### Backend Setup
@@ -78,7 +83,10 @@ A full-stack stock analysis and recommendation platform that provides real-time 
    # Alpaca API
    ALPACA_API_KEY="your_alpaca_api_key"
    ALPACA_SECRET_KEY="your_alpaca_secret_key"
-   ALPACA_BASE_URL="https://paper-api.alpaca.markets"  # or live URL
+
+   # Stock Ratings API
+   STOCK_API_URL="your_stock_api_url"
+   STOCK_API_TOKEN="your_stock_api_token"
 
    # Server
    PORT="8080"
@@ -93,7 +101,7 @@ A full-stack stock analysis and recommendation platform that provides real-time 
 
 5. **Run the server**:
    ```bash
-   go run cmd/server/main.go
+   go run cmd/lambda/main.go
    ```
 
 The backend will be available at `http://localhost:8080`
@@ -136,19 +144,19 @@ The frontend will be available at `http://localhost:5173`
 
 ### Stock Data
 
-- `GET /api/stocks/price/:symbol` - Historical price data
-- `GET /api/stocks/logo/:symbol` - Company logo
-- `GET /api/stocks/ratings` - Paginated stock ratings
-- `GET /api/stocks/ratings/:ticker` - Ratings for specific stock
+- `GET /api/v1/stocks/:symbol/price` - Historical price data with period parameter
+- `GET /api/v1/stocks/:symbol/logo` - Company logo URL
+- `GET /api/v1/ratings` - Paginated stock ratings with search
+- `GET /api/v1/ratings/:ticker` - Ratings for specific stock
 
 ### Recommendations
 
-- `GET /api/recommendations` - AI-generated recommendations
-- `POST /api/ingestion/trigger` - Trigger data ingestion
+- `GET /api/v1/recommendations` - Basic analyst-based recommendations
 
-### System
+### Admin
 
-- `GET /api/health` - Health check endpoint
+- `POST /api/v1/ingest` - Trigger data ingestion
+- `GET /health` - Health check endpoint
 
 ## 🧪 Testing
 
@@ -176,39 +184,37 @@ npm run lint
 
 ## 📦 Deployment
 
-### Current Deployment Plan
+### AWS Lambda Deployment (Configured)
 
-#### Frontend Deployment (Static Hosting)
+The application is configured for AWS Lambda deployment with:
 
-- [ ] Build production bundle: `npm run build`
-- [ ] Deploy `dist/` folder to AWS S3 bucket
-- [ ] Configure S3 for static website hosting
-- [ ] Set up CloudFront CDN for global distribution
+- **Lambda Functions**: API, Ingestion, and Scheduler functions
+- **API Gateway**: HTTP API with CORS support
+- **S3**: Deployment package storage
+- **EventBridge**: Scheduled ingestion triggers
+- **Terraform**: Complete infrastructure as code
 
-#### Backend Deployment (Containerized)
-
-- [ ] **GitHub Actions Pipeline**: Automated CI/CD
-  - Build Docker image on push to main
-  - Push image to Amazon ECR
-  - Deploy to AWS App Runner
-- [ ] **Future Migration**: Consider AWS Lambda for serverless architecture
-- [ ] **Database**: CockroachDB Cloud (already configured)
-
-### Quick Deployment Commands
-
-#### Build Docker Image
+#### Deploy to AWS
 
 ```bash
-cd backend
-docker build -t stock-analyzer-backend .
+cd backend/terraform
+terraform init
+terraform plan
+terraform apply
+
+# Deploy Lambda functions
+cd ../scripts
+./deploy.sh
 ```
 
-#### Frontend Production Build
+#### Frontend Deployment
+
+Build and deploy the frontend to any static hosting service:
 
 ```bash
 cd frontend
 npm run build
-# Upload dist/ folder to S3
+# Upload dist/ folder to your hosting service
 ```
 
 ## 🔧 Configuration
@@ -221,8 +227,9 @@ npm run build
 DATABASE_URL=            # PostgreSQL connection string
 ALPACA_API_KEY=         # Alpaca Markets API key
 ALPACA_SECRET_KEY=      # Alpaca Markets secret key
-ALPACA_BASE_URL=        # Alpaca API base URL
-PORT=8080               # Server port
+STOCK_API_URL=          # Stock ratings API URL
+STOCK_API_TOKEN=        # Stock ratings API token
+PORT=8080               # Server port (local development)
 GIN_MODE=release        # Gin mode (debug/release)
 ```
 
@@ -244,34 +251,36 @@ VITE_API_BASE_URL=      # Backend API URL
 
 - Follow Go best practices and clean architecture principles
 - Use TypeScript for all frontend code
-- Write comprehensive tests for new features
+- Write tests for new features
 - Update documentation for API changes
 - Follow conventional commit messages
 
-## 📋 Roadmap
+## 📋 Current Status
 
-### Current Sprint
+### ✅ Implemented Features
 
-- [x] Core stock data ingestion
-- [x] Real-time price charts
-- [x] Basic recommendation engine
-- [x] Responsive frontend interface
+- Stock ratings database with full CRUD operations
+- Real-time price charts with multiple timeframes
+- Basic recommendation engine based on analyst ratings
+- Search and filtering for stock ratings
+- Responsive web interface
+- AWS Lambda deployment infrastructure
+- Database migrations and schema management
 
-### Next Release
+### 🚧 Work in Progress
 
-- [ ] Enhanced AI recommendation algorithms
-- [ ] Portfolio tracking and management
-- [ ] Real-time notifications and alerts
-- [ ] Advanced technical analysis indicators
-- [ ] Social sentiment integration
+- Enhanced recommendation algorithms
+- Real-time data streaming
+- Advanced technical indicators
+- Portfolio tracking capabilities
 
-### Future Features
+### 🔮 Future Roadmap
 
-- [ ] Mobile app (React Native)
-- [ ] Options trading analysis
-- [ ] Cryptocurrency support
-- [ ] Paper trading simulation
-- [ ] Community features and social trading
+- Social sentiment integration
+- Mobile application
+- Options trading analysis
+- Paper trading simulation
+- Real-time alerts and notifications
 
 ## 📚 Tech Stack
 
@@ -279,35 +288,31 @@ VITE_API_BASE_URL=      # Backend API URL
 
 - **Language**: Go 1.23+
 - **Framework**: Gin HTTP router
-- **Database**: PostgreSQL / CockroachDB Cloud
+- **Database**: PostgreSQL / CockroachDB
 - **External APIs**: Alpaca Markets
 - **Architecture**: Clean Architecture / Domain-Driven Design
+- **Deployment**: AWS Lambda + API Gateway
 
 ### Frontend
 
 - **Framework**: Vue 3 with TypeScript
 - **Styling**: Tailwind CSS + Headless UI
-- **Charts**: Chart.js + Vue-ChartJS
+- **Charts**: Chart.js + vue-chartjs
 - **State**: Pinia
 - **Testing**: Vitest + Cypress
 - **Build**: Vite
 
-### DevOps
+### Infrastructure
 
-- **Containerization**: Docker
-- **CI/CD**: GitHub Actions
-- **Cloud**: AWS (S3, ECR, App Runner)
+- **Cloud**: AWS (Lambda, API Gateway, S3, EventBridge)
+- **IaC**: Terraform
 - **Database**: CockroachDB Cloud
-- **Monitoring**: Built-in health checks
+- **CI/CD**: Deployment scripts
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
-
-For support, please open an issue on GitHub or contact the development team.
-
 ---
 
-**Built with ❤️ for the trading community**
+**A modern stock analysis platform built with Go and Vue.js**
