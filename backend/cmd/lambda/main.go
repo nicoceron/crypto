@@ -27,6 +27,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -36,6 +37,7 @@ import (
 
 	"stock-analyzer/internal/alpaca"
 	"stock-analyzer/internal/api"
+	"stock-analyzer/internal/domain"
 	"stock-analyzer/internal/ingestion"
 	"stock-analyzer/internal/recommendation"
 	"stock-analyzer/internal/storage"
@@ -45,9 +47,15 @@ import (
 var (
 	// ginLambda is the Gin adapter for AWS Lambda, initialized once during cold start
 	ginLambda *ginadapter.GinLambda
-	
+
 	// db is the database connection pool, shared across Lambda invocations
 	db *sql.DB
+
+	// Services initialized once during cold start
+	stockRepo         domain.StockRepository
+	ingestionSvc      domain.IngestionService
+	recommendationSvc domain.RecommendationService
+	alpacaSvc         domain.AlpacaService
 )
 
 // init performs one-time initialization during Lambda cold start.
@@ -76,12 +84,12 @@ func init() {
 	}
 
 	// Initialize repositories with database connection
-	stockRepo := storage.NewPostgresRepository(db)
+	stockRepo = storage.NewPostgresRepository(db)
 
 	// Initialize business services with their dependencies
-	ingestionSvc := ingestion.NewService(stockRepo, cfg.StockAPIURL, cfg.StockAPIToken)
-	recommendationSvc := recommendation.NewService(stockRepo)
-	alpacaSvc := alpaca.NewAdapter(cfg.AlpacaAPIKey, cfg.AlpacaAPISecret)
+	ingestionSvc = ingestion.NewService(stockRepo, cfg.StockAPIURL, cfg.StockAPIToken)
+	recommendationSvc = recommendation.NewService(stockRepo)
+	alpacaSvc = alpaca.NewAdapter(cfg.AlpacaAPIKey, cfg.AlpacaAPISecret)
 
 	// Setup HTTP router with all handlers and middleware
 	router := api.SetupRouter(stockRepo, ingestionSvc, recommendationSvc, alpacaSvc)
@@ -105,12 +113,13 @@ func init() {
 func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// Determine function type from environment variable
 	functionType := os.Getenv("FUNCTION_TYPE")
+	log.Printf("Executing function type: %s", functionType)
 
 	switch functionType {
 	case "ingestion":
-		return handleIngestion(ctx, req)
+		return handleIngestion(ctx)
 	case "scheduler":
-		return handleScheduler(ctx, req)
+		return handleScheduler(ctx)
 	default:
 		// Default to API handler for HTTP requests
 		return ginLambda.ProxyWithContext(ctx, req)
@@ -129,39 +138,18 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 // Expected Trigger: EventBridge scheduled event
 // Timeout: 15 minutes (configurable via Lambda settings)
 // Memory: 1024MB (higher memory for batch processing)
-func handleIngestion(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handleIngestion(ctx context.Context) (events.APIGatewayProxyResponse, error) {
 	log.Println("Starting data ingestion...")
-
-	// Load fresh configuration for this invocation
-	cfg := config.Load()
-
-	// Initialize repositories and services
-	// We reinitialize here to ensure fresh configuration
-	stockRepo := storage.NewPostgresRepository(db)
-	ingestionSvc := ingestion.NewService(stockRepo, cfg.StockAPIURL, cfg.StockAPIToken)
 
 	// Perform complete data ingestion cycle
 	// This includes fetching, transforming, and storing data
-	err := ingestionSvc.IngestAllData(ctx)
-	if err != nil {
+	if err := ingestionSvc.IngestAllData(ctx); err != nil {
 		log.Printf("Ingestion failed: %v", err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       `{"error": "Ingestion failed"}`,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-		}, nil
+		return api.NewErrorResponse(500, "Ingestion failed"), nil
 	}
 
 	log.Println("Data ingestion completed successfully")
-	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Body:       `{"message": "Ingestion completed successfully"}`,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-	}, nil
+	return api.NewSuccessResponse(200, map[string]string{"message": "Ingestion completed successfully"}), nil
 }
 
 // handleScheduler processes scheduled maintenance and cleanup tasks.
@@ -177,23 +165,24 @@ func handleIngestion(ctx context.Context, req events.APIGatewayProxyRequest) (ev
 // Expected Trigger: EventBridge scheduled event (daily)
 // Timeout: 5 minutes
 // Memory: 256MB (lightweight maintenance tasks)
-func handleScheduler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handleScheduler(ctx context.Context) (events.APIGatewayProxyResponse, error) {
 	log.Println("Running scheduled tasks...")
 
-	// TODO: Implement scheduled task logic
-	// Examples:
-	// - Clean up old enriched data (older than 30 days)
-	// - Update recommendation cache
-	// - Generate daily analytics reports
-	// - Perform database maintenance queries
+	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 
-	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Body:       `{"message": "Scheduled tasks completed"}`,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-	}, nil
+	deletedCount, err := stockRepo.DeleteOldEnrichedData(ctx, thirtyDaysAgo)
+	if err != nil {
+		log.Printf("Scheduler failed to clean up old enriched data: %v", err)
+		return api.NewErrorResponse(500, "Scheduler task failed during data cleanup"), nil
+	}
+
+	log.Printf("Scheduler successfully cleaned up %d old enriched data records.", deletedCount)
+	response := map[string]interface{}{
+		"message":         "Scheduled tasks completed successfully",
+		"cleaned_records": deletedCount,
+	}
+
+	return api.NewSuccessResponse(200, response), nil
 }
 
 // main is the Lambda entry point that starts the AWS Lambda runtime.

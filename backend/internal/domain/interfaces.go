@@ -107,6 +107,18 @@ type StockRepository interface {
 	//   - map[string]*StockRating: Map of ticker -> latest rating
 	//   - error: nil on success, domain error on failure
 	GetLatestRatingsByTicker(ctx context.Context) (map[string]*StockRating, error)
+
+	// DeleteOldEnrichedData removes enriched stock data records older than a given time.
+	// Returns the number of records deleted.
+	//
+	// Parameters:
+	//   - ctx: Context for cancellation and timeouts
+	//   - olderThan: The timestamp threshold for deletion
+	//
+	// Returns:
+	//   - int64: Number of records deleted
+	//   - error: nil on success, domain error on failure
+	DeleteOldEnrichedData(ctx context.Context, olderThan time.Time) (int64, error)
 }
 
 // IngestionService defines the contract for data ingestion from external APIs.
@@ -213,50 +225,20 @@ type AlpacaService interface {
 	// GetHistoricalBars fetches historical price data for technical analysis.
 	// Supports various timeframes from minutes to months with automatic
 	// pagination for large date ranges.
-	//
-	// Parameters:
-	//   - ctx: Context for cancellation and timeouts
-	//   - symbol: Stock symbol (e.g., "AAPL") - case insensitive
-	//   - timeframe: Bar size ("1Min", "5Min", "1Hour", "1Day", etc.)
-	//   - start: Start date/time for historical data (inclusive)
-	//   - end: End date/time for historical data (exclusive)
-	//
-	// Returns:
-	//   - []PriceBar: Historical price bars ordered by timestamp
-	//   - error: nil on success, API error on failure
 	GetHistoricalBars(ctx context.Context, symbol string, timeframe string, start, end time.Time) ([]PriceBar, error)
 
 	// GetSnapshot fetches current market snapshot for real-time data.
 	// Provides the most recent trade, quote, and bar data for a symbol.
-	//
-	// Parameters:
-	//   - ctx: Context for cancellation and timeouts
-	//   - symbol: Stock symbol (e.g., "AAPL") - case insensitive
-	//
-	// Returns:
-	//   - *Snapshot: Current market snapshot (nil if market closed)
-	//   - error: nil on success, API error on failure
 	GetSnapshot(ctx context.Context, symbol string) (*Snapshot, error)
 
 	// GetRecentBars fetches the most recent bars for a symbol.
 	// Convenience method for getting latest price action without
 	// specifying exact time ranges.
-	//
-	// Parameters:
-	//   - ctx: Context for cancellation and timeouts
-	//   - symbol: Stock symbol (e.g., "AAPL") - case insensitive
-	//
-	// Returns:
-	//   - []PriceBar: Recent price bars (typically last 24 hours)
-	//   - error: nil on success, API error on failure
 	GetRecentBars(ctx context.Context, symbol string) ([]PriceBar, error)
 
 	// IsMarketHours checks if the US stock market is currently open.
 	// Considers regular trading hours (9:30 AM - 4:00 PM ET) and
 	// excludes weekends and market holidays.
-	//
-	// Returns:
-	//   - bool: true if market is open, false otherwise
 	IsMarketHours() bool
 }
 

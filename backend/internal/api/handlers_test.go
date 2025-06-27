@@ -67,6 +67,11 @@ func (m *MockStockRepository) GetLatestRatingsByTicker(ctx context.Context) (map
 	return args.Get(0).(map[string]*domain.StockRating), args.Error(1)
 }
 
+func (m *MockStockRepository) DeleteOldEnrichedData(ctx context.Context, olderThan time.Time) (int64, error) {
+	args := m.Called(ctx, olderThan)
+	return args.Get(0).(int64), args.Error(1)
+}
+
 // MockIngestionService is a mock implementation of domain.IngestionService
 type MockIngestionService struct {
 	mock.Mock

@@ -8,8 +8,7 @@ import (
 	"stock-analyzer/internal/domain"
 	apperrors "stock-analyzer/pkg/errors"
 	"strings"
-
-	_ "github.com/lib/pq"
+	"time"
 )
 
 // PostgresRepository implements the StockRepository interface for PostgreSQL/CockroachDB
@@ -72,6 +71,8 @@ func (r *PostgresRepository) CreateStockRatingsBatch(ctx context.Context, rating
 			rating.Action, rating.RatingFrom, rating.RatingTo, rating.TargetFrom,
 			rating.TargetTo, rating.Time)
 		if err != nil {
+			// With "ON CONFLICT DO NOTHING", an error here is unexpected.
+			// We'll rollback and return the error.
 			return 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to insert rating")
 		}
 
@@ -249,7 +250,7 @@ func (r *PostgresRepository) GetUniqueTickers(ctx context.Context) ([]string, er
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "error iterating over tickers")
+		return nil, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "error iterating over unique tickers")
 	}
 
 	return tickers, nil
@@ -346,4 +347,21 @@ func (r *PostgresRepository) GetLatestRatingsByTicker(ctx context.Context) (map[
 	}
 
 	return result, nil
+}
+
+// DeleteOldEnrichedData removes enriched stock data records older than a given time
+func (r *PostgresRepository) DeleteOldEnrichedData(ctx context.Context, olderThan time.Time) (int64, error) {
+	query := `DELETE FROM enriched_stock_data WHERE updated_at < $1`
+
+	result, err := r.db.ExecContext(ctx, query, olderThan)
+	if err != nil {
+		return 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to delete old enriched data")
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to get affected rows after deletion")
+	}
+
+	return rowsAffected, nil
 }
