@@ -131,9 +131,9 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 // to fetch fresh stock ratings data from external APIs.
 //
 // The function performs the following operations:
-//   1. Initializes ingestion service with current configuration
-//   2. Executes complete data ingestion cycle with error handling
-//   3. Returns success/failure status for monitoring
+//  1. Initializes ingestion service with current configuration
+//  2. Executes complete data ingestion cycle with error handling
+//  3. Returns success/failure status for monitoring
 //
 // Expected Trigger: EventBridge scheduled event
 // Timeout: 15 minutes (configurable via Lambda settings)

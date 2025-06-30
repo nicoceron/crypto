@@ -9,46 +9,46 @@ import (
 
 // Config holds application configuration
 type Config struct {
-	Port            string
-	Environment     string
-	DatabaseURL     string
-	LogLevel        string
-	
+	Port        string
+	Environment string
+	DatabaseURL string
+	LogLevel    string
+
 	// External API configuration
 	StockAPIURL     string
 	StockAPIToken   string
 	AlpacaAPIKey    string
 	AlpacaAPISecret string
-	
+
 	// Application settings
-	MaxWorkers      int
-	RequestTimeout  int
-	CacheEnabled    bool
+	MaxWorkers     int
+	RequestTimeout int
+	CacheEnabled   bool
 }
 
 // Load reads configuration from environment variables
 func Load() *Config {
 	return &Config{
-		Port:            getEnv("PORT", "8080"),
-		Environment:     getEnv("ENVIRONMENT", "development"),
-		DatabaseURL:     getEnv("DATABASE_URL", ""),
-		LogLevel:        getEnv("LOG_LEVEL", "info"),
-		
+		Port:        getEnv("PORT", "8080"),
+		Environment: getEnv("ENVIRONMENT", "development"),
+		DatabaseURL: getEnv("DATABASE_URL", ""),
+		LogLevel:    getEnv("LOG_LEVEL", "info"),
+
 		StockAPIURL:     getEnv("STOCK_API_URL", ""),
 		StockAPIToken:   getEnv("STOCK_API_TOKEN", ""),
 		AlpacaAPIKey:    getEnv("ALPACA_API_KEY", ""),
 		AlpacaAPISecret: getEnv("ALPACA_API_SECRET", ""),
-		
-		MaxWorkers:      getEnvInt("MAX_WORKERS", 10),
-		RequestTimeout:  getEnvInt("REQUEST_TIMEOUT_SECONDS", 30),
-		CacheEnabled:    getEnvBool("CACHE_ENABLED", true),
+
+		MaxWorkers:     getEnvInt("MAX_WORKERS", 10),
+		RequestTimeout: getEnvInt("REQUEST_TIMEOUT_SECONDS", 30),
+		CacheEnabled:   getEnvBool("CACHE_ENABLED", true),
 	}
 }
 
 // Validate checks if required configuration is present
 func (c *Config) Validate() error {
 	var missing []string
-	
+
 	if c.DatabaseURL == "" {
 		missing = append(missing, "DATABASE_URL")
 	}
@@ -58,11 +58,11 @@ func (c *Config) Validate() error {
 	if c.AlpacaAPISecret == "" {
 		missing = append(missing, "ALPACA_API_SECRET")
 	}
-	
+
 	if len(missing) > 0 {
 		return fmt.Errorf("missing required environment variables: %s", strings.Join(missing, ", "))
 	}
-	
+
 	return nil
 }
 

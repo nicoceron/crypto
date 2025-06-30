@@ -9,31 +9,18 @@ import (
 // StockRating represents a stock rating event from the API.
 // This is the core domain entity that captures analyst recommendations
 // and rating changes for publicly traded stocks.
-//
-// Example usage:
-//   rating := &StockRating{
-//       RatingID:   uuid.New(),
-//       Ticker:     "AAPL",
-//       Company:    "Apple Inc.",
-//       Brokerage:  "Goldman Sachs",
-//       Action:     "upgraded by",
-//       RatingFrom: &"Hold",
-//       RatingTo:   "Buy",
-//       TargetTo:   &180.00,
-//       Time:       time.Now(),
-//   }
 type StockRating struct {
 	RatingID   uuid.UUID `json:"rating_id" db:"rating_id"`     // Unique identifier for this rating event
-	Ticker     string    `json:"ticker" db:"ticker"`           // Stock symbol (e.g., "AAPL", "MSFT")
-	Company    string    `json:"company" db:"company"`         // Full company name (e.g., "Apple Inc.")
-	Brokerage  string    `json:"brokerage" db:"brokerage"`     // Analyst firm name (e.g., "Goldman Sachs")
-	Action     string    `json:"action" db:"action"`           // Rating action (e.g., "upgraded by", "initiated by")
-	RatingFrom *string   `json:"rating_from" db:"rating_from"` // Previous rating (nullable for new initiations)
-	RatingTo   string    `json:"rating_to" db:"rating_to"`     // New/current rating (e.g., "Buy", "Hold", "Sell")
+	Ticker     string    `json:"ticker" db:"ticker"`           // Stock symbol
+	Company    string    `json:"company" db:"company"`         // Full company name
+	Brokerage  string    `json:"brokerage" db:"brokerage"`     // Analyst firm name
+	Action     string    `json:"action" db:"action"`           // Rating action
+	RatingFrom *string   `json:"rating_from" db:"rating_from"` // Previous rating (nullable)
+	RatingTo   string    `json:"rating_to" db:"rating_to"`     // New/current rating
 	TargetFrom *float64  `json:"target_from" db:"target_from"` // Previous price target (nullable)
 	TargetTo   *float64  `json:"target_to" db:"target_to"`     // New price target (nullable)
 	Time       time.Time `json:"time" db:"time"`               // When the rating was issued
-	CreatedAt  time.Time `json:"created_at" db:"created_at"`   // When this record was created in our system
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`   // When this record was created
 }
 
 // EnrichedStockData represents additional data for recommendation analysis.
@@ -43,9 +30,9 @@ type StockRating struct {
 // The data is stored as JSON for flexibility in handling various
 // external API response formats.
 type EnrichedStockData struct {
-	Ticker           string                 `json:"ticker" db:"ticker"`                       // Stock symbol this data relates to
-	HistoricalPrices map[string]interface{} `json:"historical_prices" db:"historical_prices"` // Price history from external APIs (JSON)
-	NewsSentiment    map[string]interface{} `json:"news_sentiment" db:"news_sentiment"`       // Sentiment analysis data (JSON)
+	Ticker           string                 `json:"ticker" db:"ticker"`                       // Stock symbol
+	HistoricalPrices map[string]interface{} `json:"historical_prices" db:"historical_prices"` // Price history from external APIs
+	NewsSentiment    map[string]interface{} `json:"news_sentiment" db:"news_sentiment"`       // Sentiment analysis data
 	UpdatedAt        time.Time              `json:"updated_at" db:"updated_at"`               // Last refresh timestamp
 }
 
@@ -55,29 +42,23 @@ type EnrichedStockData struct {
 //
 // Score ranges from 0.0 to 1.0, where:
 // - 0.0-0.3: Avoid/Sell
-// - 0.3-0.7: Neutral/Hold  
+// - 0.3-0.7: Neutral/Hold
 // - 0.7-1.0: Buy/Strong Buy
 type StockRecommendation struct {
-	Ticker          string    `json:"ticker"`           // Stock symbol (e.g., "AAPL")
+	Ticker          string    `json:"ticker"`           // Stock symbol
 	Company         string    `json:"company"`          // Full company name
 	Score           float64   `json:"score"`            // Recommendation score (0.0-1.0)
-	Rationale       string    `json:"rationale"`        // Human-readable explanation of the recommendation
+	Rationale       string    `json:"rationale"`        // Human-readable explanation
 	LatestRating    string    `json:"latest_rating"`    // Most recent analyst rating
 	TargetPrice     *float64  `json:"target_price"`     // Analyst price target (nullable)
-	TechnicalSignal string    `json:"technical_signal"` // Technical analysis result (e.g., "Golden Cross")
-	SentimentScore  *float64  `json:"sentiment_score"`  // News sentiment score 0.0-1.0 (nullable)
+	TechnicalSignal string    `json:"technical_signal"` // Technical analysis result
+	SentimentScore  *float64  `json:"sentiment_score"`  // News sentiment score (nullable)
 	GeneratedAt     time.Time `json:"generated_at"`     // When this recommendation was generated
 }
 
 // PaginatedResponse represents a paginated API response.
 // This generic type provides consistent pagination across all endpoints
 // that return lists of data.
-//
-// Example usage:
-//   response := PaginatedResponse[StockRating]{
-//       Data: ratings,
-//       Pagination: Pagination{Page: 1, Limit: 20, TotalItems: 100},
-//   }
 type PaginatedResponse[T any] struct {
 	Data       []T        `json:"data"`       // The actual data items for this page
 	Pagination Pagination `json:"pagination"` // Pagination metadata
@@ -109,12 +90,12 @@ type APIResponse struct {
 // parsing/validation before use.
 type APIStockRating struct {
 	Ticker     string `json:"ticker"`      // Stock symbol as string
-	Company    string `json:"company"`     // Company name as string  
+	Company    string `json:"company"`     // Company name as string
 	Brokerage  string `json:"brokerage"`   // Analyst firm name as string
 	Action     string `json:"action"`      // Rating action as string
-	RatingFrom string `json:"rating_from"` // Previous rating as string (may be empty)
+	RatingFrom string `json:"rating_from"` // Previous rating as string
 	RatingTo   string `json:"rating_to"`   // New rating as string
-	TargetFrom string `json:"target_from"` // Previous target as string (may be empty)
-	TargetTo   string `json:"target_to"`   // New target as string (may be empty)
-	Time       string `json:"time"`        // Rating time as ISO string (requires parsing)
+	TargetFrom string `json:"target_from"` // Previous target as string
+	TargetTo   string `json:"target_to"`   // New target as string
+	Time       string `json:"time"`        // Rating time as ISO string
 }

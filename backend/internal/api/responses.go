@@ -44,4 +44,4 @@ func NewErrorResponse(statusCode int, message string) events.APIGatewayProxyResp
 		Body:       string(jsonBody),
 		Headers:    map[string]string{"Content-Type": "application/json"},
 	}
-} 
+}

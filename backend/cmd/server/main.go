@@ -159,7 +159,7 @@ func shouldRunInitialIngestion(stockRepo *storage.PostgresRepository) bool {
 		SortDesc: true,
 		Search:   "",
 	}
-	
+
 	response, err := stockRepo.GetStockRatings(ctx, filters)
 	if err != nil {
 		log.Printf("Error checking for existing data: %v", err)

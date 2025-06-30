@@ -278,7 +278,7 @@ func TestIngestAllData_RepositoryError(t *testing.T) {
 	service := NewService(stockRepo, server.URL, "test-token")
 
 	// Mock repository error
-			stockRepo.On("CreateStockRatingsBatch", mock.Anything, mock.Anything).Return(0, apperrors.ErrDatabaseFailure)
+	stockRepo.On("CreateStockRatingsBatch", mock.Anything, mock.Anything).Return(0, apperrors.ErrDatabaseFailure)
 
 	err := service.IngestAllData(context.Background())
 

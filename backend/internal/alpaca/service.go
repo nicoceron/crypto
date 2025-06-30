@@ -306,7 +306,7 @@ func (a *Adapter) GetHistoricalBars(ctx context.Context, symbol string, timefram
 	if err != nil {
 		return nil, err
 	}
-	
+
 	domainBars := make([]domain.PriceBar, len(bars))
 	for i, bar := range bars {
 		domainBars[i] = domain.PriceBar{
@@ -318,7 +318,7 @@ func (a *Adapter) GetHistoricalBars(ctx context.Context, symbol string, timefram
 			Volume:    bar.Volume,
 		}
 	}
-	
+
 	return domainBars, nil
 }
 
@@ -328,15 +328,15 @@ func (a *Adapter) GetSnapshot(ctx context.Context, symbol string) (*domain.Snaps
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if snapshot == nil {
 		return nil, nil
 	}
-	
+
 	domainSnapshot := &domain.Snapshot{
 		Symbol: snapshot.Symbol,
 	}
-	
+
 	if snapshot.LatestTrade != nil {
 		domainSnapshot.LatestTrade = &domain.Trade{
 			Timestamp: snapshot.LatestTrade.Timestamp,
@@ -344,7 +344,7 @@ func (a *Adapter) GetSnapshot(ctx context.Context, symbol string) (*domain.Snaps
 			Size:      snapshot.LatestTrade.Size,
 		}
 	}
-	
+
 	if snapshot.LatestQuote != nil {
 		domainSnapshot.LatestQuote = &domain.Quote{
 			Timestamp: snapshot.LatestQuote.Timestamp,
@@ -354,7 +354,7 @@ func (a *Adapter) GetSnapshot(ctx context.Context, symbol string) (*domain.Snaps
 			AskSize:   snapshot.LatestQuote.AskSize,
 		}
 	}
-	
+
 	if snapshot.MinuteBar != nil {
 		domainSnapshot.MinuteBar = &domain.PriceBar{
 			Timestamp: snapshot.MinuteBar.Timestamp,
@@ -365,7 +365,7 @@ func (a *Adapter) GetSnapshot(ctx context.Context, symbol string) (*domain.Snaps
 			Volume:    snapshot.MinuteBar.Volume,
 		}
 	}
-	
+
 	if snapshot.DailyBar != nil {
 		domainSnapshot.DailyBar = &domain.PriceBar{
 			Timestamp: snapshot.DailyBar.Timestamp,
@@ -376,7 +376,7 @@ func (a *Adapter) GetSnapshot(ctx context.Context, symbol string) (*domain.Snaps
 			Volume:    snapshot.DailyBar.Volume,
 		}
 	}
-	
+
 	if snapshot.PrevDailyBar != nil {
 		domainSnapshot.PrevDailyBar = &domain.PriceBar{
 			Timestamp: snapshot.PrevDailyBar.Timestamp,
@@ -387,7 +387,7 @@ func (a *Adapter) GetSnapshot(ctx context.Context, symbol string) (*domain.Snaps
 			Volume:    snapshot.PrevDailyBar.Volume,
 		}
 	}
-	
+
 	return domainSnapshot, nil
 }
 
@@ -397,7 +397,7 @@ func (a *Adapter) GetRecentBars(ctx context.Context, symbol string) ([]domain.Pr
 	if err != nil {
 		return nil, err
 	}
-	
+
 	domainBars := make([]domain.PriceBar, len(bars))
 	for i, bar := range bars {
 		domainBars[i] = domain.PriceBar{
@@ -409,7 +409,7 @@ func (a *Adapter) GetRecentBars(ctx context.Context, symbol string) ([]domain.Pr
 			Volume:    bar.Volume,
 		}
 	}
-	
+
 	return domainBars, nil
 }
 

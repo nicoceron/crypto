@@ -2,7 +2,6 @@
   <div class="bg-white shadow rounded-lg p-3 flex flex-col">
     <div class="flex items-center justify-between mb-2">
       <h3 class="text-lg font-semibold text-gray-900 flex items-center">🚀 Recent Upgrades</h3>
-      <button class="text-blue-600 hover:underline text-sm">View more →</button>
     </div>
 
     <div v-if="recentUpgrades && recentUpgrades.length > 0" class="space-y-2 flex-1">
