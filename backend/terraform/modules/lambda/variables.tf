@@ -8,21 +8,6 @@ variable "environment" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "ID of the VPC"
-  type        = string
-}
-
-variable "app_subnet_ids" {
-  description = "List of application subnet IDs"
-  type        = list(string)
-}
-
-variable "app_security_group_id" {
-  description = "ID of the application security group"
-  type        = string
-}
-
 variable "database_url" {
   description = "Database connection URL"
   type        = string
@@ -50,6 +35,11 @@ variable "stock_api_token" {
   description = "Stock API token"
   type        = string
   sensitive   = true
+}
+
+variable "frontend_url" {
+  description = "Frontend application URL for CORS configuration"
+  type        = string
 }
 
 variable "common_tags" {

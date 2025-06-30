@@ -1,61 +1,103 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
-// Config holds all configuration for our application
+// Config holds application configuration
 type Config struct {
-	// Server configuration
-	Port string
-
-	// Database configuration
-	DatabaseURL string
-
+	Port            string
+	Environment     string
+	DatabaseURL     string
+	LogLevel        string
+	
 	// External API configuration
 	StockAPIURL     string
 	StockAPIToken   string
-	AlphaVantageKey string
-
-	// Alpaca API configuration
 	AlpacaAPIKey    string
 	AlpacaAPISecret string
-
-	// Application configuration
-	Environment string
-	LogLevel    string
+	
+	// Application settings
+	MaxWorkers      int
+	RequestTimeout  int
+	CacheEnabled    bool
 }
 
 // Load reads configuration from environment variables
 func Load() *Config {
 	return &Config{
 		Port:            getEnv("PORT", "8080"),
+		Environment:     getEnv("ENVIRONMENT", "development"),
 		DatabaseURL:     getEnv("DATABASE_URL", ""),
-		StockAPIURL:     getEnv("STOCK_API_URL", "https://8j5baasof2.execute-api.us-west-2.amazonaws.com/production/swechallenge/list"),
+		LogLevel:        getEnv("LOG_LEVEL", "info"),
+		
+		StockAPIURL:     getEnv("STOCK_API_URL", ""),
 		StockAPIToken:   getEnv("STOCK_API_TOKEN", ""),
-		AlphaVantageKey: getEnv("ALPHA_VANTAGE_KEY", ""),
 		AlpacaAPIKey:    getEnv("ALPACA_API_KEY", ""),
 		AlpacaAPISecret: getEnv("ALPACA_API_SECRET", ""),
-		Environment:     getEnv("ENVIRONMENT", "development"),
-		LogLevel:        getEnv("LOG_LEVEL", "info"),
+		
+		MaxWorkers:      getEnvInt("MAX_WORKERS", 10),
+		RequestTimeout:  getEnvInt("REQUEST_TIMEOUT_SECONDS", 30),
+		CacheEnabled:    getEnvBool("CACHE_ENABLED", true),
 	}
 }
 
-// getEnv gets an environment variable with a fallback value
-func getEnv(key, fallback string) string {
+// Validate checks if required configuration is present
+func (c *Config) Validate() error {
+	var missing []string
+	
+	if c.DatabaseURL == "" {
+		missing = append(missing, "DATABASE_URL")
+	}
+	if c.AlpacaAPIKey == "" {
+		missing = append(missing, "ALPACA_API_KEY")
+	}
+	if c.AlpacaAPISecret == "" {
+		missing = append(missing, "ALPACA_API_SECRET")
+	}
+	
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required environment variables: %s", strings.Join(missing, ", "))
+	}
+	
+	return nil
+}
+
+// IsProduction returns true if running in production environment
+func (c *Config) IsProduction() bool {
+	return c.Environment == "production"
+}
+
+// IsDevelopment returns true if running in development environment
+func (c *Config) IsDevelopment() bool {
+	return c.Environment == "development"
+}
+
+// Utility functions
+func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
-	return fallback
+	return defaultValue
 }
 
-// getEnvInt gets an environment variable as an integer with a fallback value
-func getEnvInt(key string, fallback int) int {
+func getEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if intValue, err := strconv.Atoi(value); err == nil {
 			return intValue
 		}
 	}
-	return fallback
+	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
+		}
+	}
+	return defaultValue
 }

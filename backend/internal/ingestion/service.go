@@ -232,27 +232,22 @@ func (s *Service) transformAPIRatings(apiRatings []domain.APIStockRating) ([]dom
 		ratings = append(ratings, rating)
 	}
 
-	fmt.Printf("📊 Filtered ratings: %d → %d (removed %d duplicates)\n",
-		len(apiRatings), len(ratings), len(apiRatings)-len(ratings))
-
+	fmt.Printf("Filtered ratings: %d → %d\n", len(apiRatings), len(ratings))
 	return ratings, nil
 }
 
-// parsePrice extracts numeric value from price string (e.g., "$7.00" -> 7.00)
+// parsePrice extracts numeric value from price string
 func (s *Service) parsePrice(priceStr string) (float64, error) {
-	// Remove currency symbols and whitespace
 	cleaned := strings.TrimSpace(priceStr)
 	cleaned = strings.TrimPrefix(cleaned, "$")
 	cleaned = strings.TrimPrefix(cleaned, "€")
 	cleaned = strings.TrimPrefix(cleaned, "£")
 
-	// Parse as float
 	return strconv.ParseFloat(cleaned, 64)
 }
 
 // EnrichStockData fetches additional data for stocks from external sources
 func (s *Service) EnrichStockData(ctx context.Context, tickers []string) error {
-	// TODO: Implement real data enrichment from external APIs
-	fmt.Printf("Enriching data for %d tickers (not yet implemented)\n", len(tickers))
+	fmt.Printf("Enriching data for %d tickers (not implemented)\n", len(tickers))
 	return nil
 }

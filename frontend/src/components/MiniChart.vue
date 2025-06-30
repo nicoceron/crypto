@@ -70,7 +70,7 @@ const priceData = computed(() => {
   const storeData = stocksStore.getPriceData(props.symbol)
   if (!storeData?.bars) return []
 
-  return storeData.bars.map((bar: any) => ({
+  return storeData.bars.map((bar: PriceBar) => ({
     timestamp: bar.timestamp,
     close: bar.close,
   }))

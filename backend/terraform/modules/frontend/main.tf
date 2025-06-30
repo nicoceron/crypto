@@ -20,7 +20,7 @@ resource "aws_s3_bucket_versioning" "frontend" {
   }
 }
 
-# S3 bucket public access block (we'll use CloudFront instead)
+# S3 bucket public access block
 resource "aws_s3_bucket_public_access_block" "frontend" {
   bucket = aws_s3_bucket.frontend.id
   
@@ -47,8 +47,8 @@ resource "aws_s3_bucket_cors_configuration" "frontend" {
 
   cors_rule {
     allowed_headers = ["*"]
-    allowed_methods = ["GET", "POST", "PUT", "DELETE", "HEAD"]
-    allowed_origins = ["*"]
+    allowed_methods = ["GET", "HEAD"]
+    allowed_origins = ["https://${aws_cloudfront_distribution.frontend.domain_name}"]
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
@@ -109,7 +109,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
   
-  # Cache behavior for API calls (don't cache, forward all headers)
+  # Cache behavior for API calls
   ordered_cache_behavior {
     path_pattern           = "/api/*"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -169,12 +169,9 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
     
     min_ttl     = 0
-    default_ttl = 86400   # 1 day
-    max_ttl     = 31536000 # 1 year
+    default_ttl = 86400
+    max_ttl     = 31536000
   }
-
-  # Note: Removed custom error responses that were interfering with API calls
-  # SPA routing will be handled by the Vue.js router instead
   
   price_class = var.environment == "prod" ? "PriceClass_All" : "PriceClass_100"
   
@@ -191,7 +188,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   tags = var.common_tags
 }
 
-# Create placeholder index.html file first
+# Create placeholder index.html file
 resource "local_file" "placeholder_index" {
   filename = "${path.module}/placeholder-index.html"
   content  = <<-EOF
@@ -215,7 +212,7 @@ resource "local_file" "placeholder_index" {
 EOF
 }
 
-# S3 objects for common files (will be updated by deployment script)
+# S3 objects for common files
 resource "aws_s3_object" "index_html" {
   depends_on = [local_file.placeholder_index]
   

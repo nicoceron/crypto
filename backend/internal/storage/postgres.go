@@ -71,12 +71,9 @@ func (r *PostgresRepository) CreateStockRatingsBatch(ctx context.Context, rating
 			rating.Action, rating.RatingFrom, rating.RatingTo, rating.TargetFrom,
 			rating.TargetTo, rating.Time)
 		if err != nil {
-			// With "ON CONFLICT DO NOTHING", an error here is unexpected.
-			// We'll rollback and return the error.
 			return 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to insert rating")
 		}
 
-		// Check if a row was actually inserted
 		if rowsAffected, err := result.RowsAffected(); err == nil && rowsAffected > 0 {
 			insertedCount++
 		}
@@ -86,9 +83,7 @@ func (r *PostgresRepository) CreateStockRatingsBatch(ctx context.Context, rating
 		return 0, apperrors.Wrap(err, apperrors.ErrCodeDatabase, "failed to commit transaction")
 	}
 
-	fmt.Printf("📊 Database batch insert: %d attempted → %d inserted (skipped %d duplicates)\n",
-		len(ratings), insertedCount, len(ratings)-insertedCount)
-
+	fmt.Printf("Database batch: %d attempted → %d inserted\n", len(ratings), insertedCount)
 	return insertedCount, nil
 }
 

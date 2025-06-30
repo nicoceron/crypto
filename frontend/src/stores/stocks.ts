@@ -17,10 +17,16 @@ interface StockLogoData {
   lastUpdated: number
 }
 
+// Interface for price bar data
+interface PriceBar {
+  timestamp: string
+  close: number
+}
+
 // Interface for price data store (no caching, just shared data)
 interface StockPriceData {
   symbol: string
-  bars: any[]
+  bars: PriceBar[]
   lastUpdated: number
 }
 
@@ -143,7 +149,7 @@ export const useStocksStore = defineStore('stocks', () => {
     return priceDataStore.value.get(symbol) || null
   }
 
-  function setPriceData(symbol: string, bars: any[]) {
+  function setPriceData(symbol: string, bars: PriceBar[]) {
     priceDataStore.value.set(symbol, {
       symbol,
       bars,
@@ -224,7 +230,7 @@ export const useStocksStore = defineStore('stocks', () => {
             } else {
               setCachedLogoData(symbol, `https://logo.clearbit.com/${symbol.toLowerCase()}.com`)
             }
-          } catch (error) {
+          } catch {
             setCachedLogoData(symbol, `https://logo.clearbit.com/${symbol.toLowerCase()}.com`)
           } finally {
             rateLimitState.value.activeRequests--
@@ -326,7 +332,7 @@ export const useStocksStore = defineStore('stocks', () => {
             } else {
               setPriceData(symbol, [])
             }
-          } catch (error) {
+          } catch {
             setPriceData(symbol, [])
           } finally {
             rateLimitState.value.activeRequests--

@@ -53,6 +53,7 @@ server
 
 # Terraform
 terraform/terraform.tfvars
+terraform/variables.tf
 terraform/.terraform/
 terraform/*.tfstate
 terraform/*.tfstate.*

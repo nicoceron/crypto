@@ -59,6 +59,11 @@ variable "stock_api_token" {
   sensitive   = true
 }
 
+variable "frontend_url" {
+  description = "Frontend application URL for CORS configuration"
+  type        = string
+}
+
 variable "common_tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)

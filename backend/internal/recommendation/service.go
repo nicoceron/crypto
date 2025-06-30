@@ -198,32 +198,26 @@ func (s *Service) generateBasicRationale(rating *domain.StockRating) string {
 func (s *Service) GetCachedRecommendations(ctx context.Context) ([]domain.StockRecommendation, error) {
 	s.cache.mutex.RLock()
 
-	// Check if cache is still valid
 	if time.Since(s.cache.lastUpdated) < s.cache.ttl && len(s.cache.recommendations) > 0 {
 		recommendations := make([]domain.StockRecommendation, len(s.cache.recommendations))
 		copy(recommendations, s.cache.recommendations)
 		s.cache.mutex.RUnlock()
 
-		fmt.Printf("Returning cached recommendations (%d items)\n", len(recommendations))
 		return recommendations, nil
 	}
 
 	s.cache.mutex.RUnlock()
 
-	// Cache is stale or empty, generate new recommendations
-	fmt.Println("Generating fresh recommendations...")
 	recommendations, err := s.GenerateRecommendations(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Update cache
 	s.cache.mutex.Lock()
 	s.cache.recommendations = recommendations
 	s.cache.lastUpdated = time.Now()
 	s.cache.mutex.Unlock()
 
-	fmt.Printf("Generated and cached %d recommendations\n", len(recommendations))
 	return recommendations, nil
 }
 
@@ -239,7 +233,6 @@ func (s *Service) analyzeTechnical(historicalData map[string]interface{}) (strin
 		return "Insufficient Data", 0.0
 	}
 
-	// Simple trend analysis based on first and last close prices
 	firstClose, ok1 := dataSlice[0]["close"].(float64)
 	lastClose, ok2 := dataSlice[len(dataSlice)-1]["close"].(float64)
 

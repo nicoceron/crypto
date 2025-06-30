@@ -232,7 +232,7 @@ resource "aws_api_gateway_integration_response" "cors" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Api-Key, X-Amz-Date, X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods" = "'GET, POST, PUT, DELETE, OPTIONS, HEAD'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'${var.frontend_url}'"
     "method.response.header.Access-Control-Expose-Headers" = "'Content-Length, Content-Type'"
     "method.response.header.Access-Control-Allow-Credentials" = "'false'"
     "method.response.header.Access-Control-Max-Age" = "'86400'"

@@ -38,13 +38,11 @@ module "networking" {
 module "lambda" {
   source = "./modules/lambda"
   
-  project_name           = var.project_name
-  environment            = var.environment
-  vpc_id                = module.networking.vpc_id
-  app_subnet_ids        = module.networking.public_subnet_ids
-  app_security_group_id = module.networking.app_security_group_id
-  database_url          = var.cockroachdb_connection_string
-  common_tags           = var.common_tags
+  project_name   = var.project_name
+  environment    = var.environment
+  database_url   = var.cockroachdb_connection_string
+  frontend_url   = var.frontend_url
+  common_tags    = var.common_tags
   
   # Application configuration
   alpaca_api_key    = var.alpaca_api_key
@@ -60,6 +58,7 @@ module "api_gateway" {
   project_name    = var.project_name
   environment     = var.environment
   lambda_functions = module.lambda.lambda_functions
+  frontend_url    = var.frontend_url
   common_tags     = var.common_tags
 }
 

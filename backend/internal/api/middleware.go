@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"os"
 
 	apperrors "stock-analyzer/pkg/errors"
 
@@ -65,8 +66,14 @@ func handleError(c *gin.Context, err error) {
 // CORS middleware to handle cross-origin requests
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Get frontend URL from environment or use wildcard for development
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "*" // Fallback for local development
+		}
+
 		// Set CORS headers for all requests
-		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Origin", frontendURL)
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Api-Key, X-Amz-Date, X-Amz-Security-Token")
 		c.Header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
